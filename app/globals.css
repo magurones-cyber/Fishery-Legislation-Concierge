@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 200 40% 98%;
+  --foreground: 202 50% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 202 50% 10%;
+  --primary: 188 90% 28%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 48 90% 54%;
+  --secondary-foreground: 202 50% 10%;
+  --muted: 190 18% 91%;
+  --muted-foreground: 200 14% 36%;
+  --accent: 156 45% 40%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 190 20% 84%;
+  --input: 190 20% 84%;
+  --ring: 188 90% 28%;
+}
+
+.dark {
+  --background: 202 44% 8%;
+  --foreground: 190 30% 96%;
+  --card: 202 36% 12%;
+  --card-foreground: 190 30% 96%;
+  --primary: 184 76% 42%;
+  --primary-foreground: 202 50% 8%;
+  --secondary: 48 90% 54%;
+  --secondary-foreground: 202 50% 10%;
+  --muted: 202 26% 18%;
+  --muted-foreground: 190 16% 72%;
+  --accent: 156 44% 42%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 202 24% 24%;
+  --input: 202 24% 24%;
+  --ring: 184 76% 42%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  min-height: 100vh;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
+}
