@@ -1,0 +1,67 @@
+# dependencies / build outputs
+.DS_Store
+node_modules
+.next
+dist
+coverage
+*.tsbuildinfo
+.vercel
+.turbo
+
+# local runtime bundled by Codex desktop
+work
+
+# environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.mobileprovision
+
+# Supabase local state
+supabase/.branches
+supabase/.temp
+
+# repository must not store production or source documents
+data
+uploads
+storage
+backups
+exports
+archives
+embeddings
+vector-store
+rag-cache
+qa-logs
+analytics-exports
+private
+secrets
+local-seed
+real-data
+
+# large or sensitive source assets belong in Storage, not Git
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.heic
+*.tif
+*.tiff
+*.mp4
+*.mov
+*.m4a
+*.wav
+
+# keep schema and minimal seed versioned
+!supabase/migrations/
+!supabase/migrations/*.sql
+!supabase/seed.sql

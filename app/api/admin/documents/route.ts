@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createServiceClient, getDefaultOrganizationId } from "@/lib/supabase-admin";
+import { createServiceClient } from "@/lib/supabase-admin";
+import { DOCUMENT_EDITOR_ROLES, requireApiAuth } from "@/lib/auth";
 import { chunkPages, estimateTokens } from "@/lib/rag/chunk";
 import { extractTextFromFile } from "@/lib/rag/extract";
 import { createEmbedding } from "@/lib/rag/openai";
@@ -10,8 +11,8 @@ export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
-    const adminGuard = assertAdminUploadRequest(request);
-    if (adminGuard) return adminGuard;
+    const auth = await requireApiAuth({ roles: DOCUMENT_EDITOR_ROLES });
+    if (auth.response) return auth.response;
 
     const formData = await request.formData();
     const file = formData.get("file");
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = createServiceClient();
-    const organizationId = getDefaultOrganizationId();
+    const organizationId = auth.context.organizationId;
     const title = readString(formData, "title") || file.name;
     const categoryId = readString(formData, "categoryId") || (await resolveCategoryId(supabase, organizationId, readString(formData, "categoryCode")));
     const subcategoryId = readString(formData, "subcategoryId") || (await resolveCategoryId(supabase, organizationId, readString(formData, "subcategoryCode")));
@@ -138,24 +139,6 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "資料登録処理でエラーが発生しました。" }, { status: 500 });
   }
-}
-
-function assertAdminUploadRequest(request: Request) {
-  const expectedToken = process.env.ADMIN_UPLOAD_TOKEN;
-  const isProduction = process.env.NODE_ENV === "production";
-
-  if (!expectedToken && isProduction) {
-    return NextResponse.json({ error: "本番環境の資料登録には ADMIN_UPLOAD_TOKEN の設定が必要です。" }, { status: 503 });
-  }
-
-  if (!expectedToken) return null;
-
-  const actualToken = request.headers.get("x-admin-upload-token");
-  if (actualToken !== expectedToken) {
-    return NextResponse.json({ error: "資料登録権限を確認できません。" }, { status: 401 });
-  }
-
-  return null;
 }
 
 function readString(formData: FormData, key: string) {

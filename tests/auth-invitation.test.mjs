@@ -38,6 +38,9 @@ test("login supports password and magic link without free signup", () => {
   assert.match(login, /signInWithPassword/);
   assert.match(login, /signInWithOtp/);
   assert.match(login, /shouldCreateUser: false/);
+  assert.match(login, /\/auth\/callback\?next=\/consent/);
+  assert.match(read("app/auth/callback/route.ts"), /exchangeCodeForSession/);
+  assert.match(read("middleware.ts"), /supabase\.auth\.getUser/);
   assert.match(read("app/login/page.tsx"), /管理者招待制/);
 });
 
@@ -48,16 +51,38 @@ test("admin invitation route assigns organization, role, and audit log", () => {
   assert.match(route, /user_organizations/);
   assert.match(route, /user_roles/);
   assert.match(route, /user_invite/);
-  assert.match(route, /ADMIN_INVITE_TOKEN/);
+  assert.match(route, /requireApiAuth/);
+  assert.match(route, /ADMIN_ROLES/);
+  assert.match(route, /role === "system_admin"/);
   assert.match(read("app/admin/users/page.tsx"), /ユーザー招待/);
 });
 
-test("question API requires consent and Auth policy migration documents invitation-only operation", () => {
-  assert.match(read("app/api/ask/route.ts"), /consentAccepted/);
-  assert.match(read("app/api/ask/route.ts"), /同意が必要/);
+test("question API derives consent, organization, and role from authenticated session", () => {
+  const ask = read("app/api/ask/route.ts");
+  assert.match(ask, /requireApiAuth/);
+  assert.match(ask, /auth\.context\.organizationId/);
+  assert.match(ask, /audienceRoleFor\(auth\.context\)/);
+  assert.doesNotMatch(ask, /consentAccepted|body\.role/);
   const sql = read("supabase/migrations/202606140013_auth_invitation_policy.sql");
   assert.match(sql, /user_invitations/);
   assert.match(sql, /invitation_required/);
   assert.match(sql, /free_signup/);
   assert.match(sql, /initial_consent_required/);
+});
+
+test("admin pages and APIs use server-side role checks", () => {
+  const layout = read("app/admin/layout.tsx");
+  assert.match(layout, /ADMIN_ROLES/);
+  assert.match(layout, /hasAnyRole/);
+  assert.match(read("app/api/admin/question-logs/access/route.ts"), /QUESTION_LOG_ADMIN_ROLES/);
+  assert.match(read("app/api/admin/documents/route.ts"), /DOCUMENT_EDITOR_ROLES/);
+});
+
+test("service worker does not cache authenticated application pages", () => {
+  const worker = read("public/sw.js");
+  for (const path of ["/dashboard", "/ask", "/documents", "/cases", "/admin"]) {
+    assert.doesNotMatch(worker, new RegExp(`\"${path}\"`));
+  }
+  assert.doesNotMatch(worker, /"\/login"/);
+  assert.match(worker, /PUBLIC_PAGE_PATHS/);
 });

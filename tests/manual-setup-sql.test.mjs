@@ -15,6 +15,7 @@ const setupFiles = [
   "05_policies.sql",
   "06_seed_master_data.sql",
   "07_storage_notes.sql",
+  "08_auth_connection.sql",
   "99_reset_dev_only.sql",
   "all_in_one_setup.sql"
 ];
@@ -139,6 +140,7 @@ test("all-in-one setup is a real combined SQL file", () => {
 
   assert.match(allInOne, /Source: supabase\/manual-setup\/00_enable_extensions\.sql/);
   assert.match(allInOne, /Source: supabase\/manual-setup\/07_storage_notes\.sql/);
+  assert.match(allInOne, /Source: supabase\/manual-setup\/08_auth_connection\.sql/);
   assert.match(allInOne, /create extension if not exists vector/);
   assert.match(allInOne, /create table if not exists public\.organizations/);
   assert.match(allInOne, /create or replace function public\.hybrid_search_document_chunks/);

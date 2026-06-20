@@ -1,29 +1,28 @@
 import { NextResponse } from "next/server";
-import { createServiceClient, getDefaultOrganizationId } from "@/lib/supabase-admin";
+import { createServiceClient } from "@/lib/supabase-admin";
+import { audienceRoleFor, requireApiAuth } from "@/lib/auth";
 import { createGroundedAnswer } from "@/lib/rag/openai";
 import { hybridSearch } from "@/lib/rag/search";
 import { estimateConfidence } from "@/lib/rag/confidence";
 import { maskSensitiveText } from "@/lib/privacy/masking";
 import { CURRENT_TERMS_VERSION } from "@/lib/privacy/consent";
-import type { AudienceRole } from "@/lib/rag/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { question?: string; role?: AudienceRole; consentAccepted?: boolean };
+    const auth = await requireApiAuth();
+    if (auth.response) return auth.response;
+
+    const body = (await request.json()) as { question?: string };
     const question = body.question?.trim();
     if (!question) {
       return NextResponse.json({ error: "質問を入力してください。" }, { status: 400 });
     }
-    if (!body.consentAccepted) {
-      return NextResponse.json({ error: "質問機能の利用には、利用規約、プライバシーポリシー、質問ログ分析への同意が必要です。" }, { status: 403 });
-    }
-
     const supabase = createServiceClient();
-    const organizationId = getDefaultOrganizationId();
-    const role = body.role ?? "public";
+    const organizationId = auth.context.organizationId;
+    const role = audienceRoleFor(auth.context);
     const masked = maskSensitiveText(question);
     const sources = await hybridSearch(supabase, {
       query: masked.maskedText,
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
 
     const answer = await createGroundedAnswer(masked.maskedText, sources);
     const confidence = estimateConfidence(sources);
-    const sessionId = await saveQaLog(supabase, organizationId, question, masked.maskedText, answer, confidence, sources);
+    const sessionId = await saveQaLog(supabase, organizationId, auth.context.user.id, question, masked.maskedText, answer, confidence, sources);
 
     return NextResponse.json({
       sessionId,
@@ -52,6 +51,7 @@ export async function POST(request: Request) {
 async function saveQaLog(
   supabase: ReturnType<typeof createServiceClient>,
   organizationId: string,
+  userId: string,
   question: string,
   maskedQuestion: string,
   answer: string,
@@ -62,6 +62,8 @@ async function saveQaLog(
     .from("qa_sessions")
     .insert({
       organization_id: organizationId,
+      user_id: userId,
+      user_organization_id: organizationId,
       title: maskedQuestion.slice(0, 80),
       status: "active",
       consent_version: CURRENT_TERMS_VERSION,

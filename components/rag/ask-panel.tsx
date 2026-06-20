@@ -10,7 +10,7 @@ import { SourceCard } from "@/components/rag/source-card";
 import { CURRENT_PRIVACY_POLICY_VERSION, CURRENT_TERMS_VERSION } from "@/lib/privacy/consent";
 import { maskSensitiveText } from "@/lib/privacy/masking";
 import { answerRatingOptions } from "@/lib/phase4-data";
-import type { AudienceRole, SearchResult } from "@/lib/rag/types";
+import type { SearchResult } from "@/lib/rag/types";
 
 const examples = [
   "漁協が員外利用者へ氷を販売することは可能ですか。",
@@ -21,13 +21,11 @@ const examples = [
 
 export function AskPanel() {
   const [question, setQuestion] = useState("");
-  const [role, setRole] = useState<AudienceRole>("public");
   const [answer, setAnswer] = useState("");
   const [confidence, setConfidence] = useState("");
   const [sources, setSources] = useState<SearchResult[]>([]);
   const [message, setMessage] = useState("質問を入力してください。");
   const [loading, setLoading] = useState(false);
-  const [agreed, setAgreed] = useState(false);
   const [maskConfirmed, setMaskConfirmed] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackReason, setFeedbackReason] = useState("");
@@ -36,10 +34,6 @@ export function AskPanel() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!agreed) {
-      setMessage("質問機能の利用には、利用規約、プライバシーポリシー、質問ログ分析への同意が必要です。");
-      return;
-    }
     if (masking.containsPersonalData && !maskConfirmed) {
       setMessage("個人情報らしき内容を検知しました。マスキング前後を確認し、確認チェックを入れてください。");
       return;
@@ -52,7 +46,7 @@ export function AskPanel() {
     const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ question: masking.maskedText, role, consentAccepted: agreed })
+      body: JSON.stringify({ question })
     });
     const data = (await response.json()) as {
       answer?: string;
@@ -124,18 +118,9 @@ export function AskPanel() {
             <p className="text-xs leading-relaxed text-muted-foreground">
               入力された質問、AI回答、参照資料、利用日時は、回答履歴の保存、業務改善、研修・FAQ作成、支援ニーズ分析のため、管理者が閲覧・分析する場合があります。個人情報や機密情報は必要最小限にしてください。
             </p>
-            <label className="flex items-start gap-2 rounded-md border bg-background p-3 text-xs leading-relaxed">
-              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
-              <span>
-                利用規約（{CURRENT_TERMS_VERSION}）、プライバシーポリシー（{CURRENT_PRIVACY_POLICY_VERSION}）、質問ログが管理者により閲覧・分析されることに同意します。
-              </span>
-            </label>
-            <select value={role} onChange={(event) => setRole(event.target.value as AudienceRole)} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
-              <option value="public">公開</option>
-              <option value="fisheries_coop_staff">漁協職員</option>
-              <option value="municipality_staff">自治体職員</option>
-              <option value="admin">管理者</option>
-            </select>
+            <p className="rounded-md border bg-muted p-3 text-xs text-muted-foreground">
+              利用規約（{CURRENT_TERMS_VERSION}）・プライバシーポリシー（{CURRENT_PRIVACY_POLICY_VERSION}）への同意と、ログイン中の所属・ロールをサーバー側で確認して検索します。
+            </p>
             <Button className="w-full" disabled={loading}>
               <Send className="h-4 w-4" aria-hidden />
               {loading ? "回答生成中" : "質問する"}

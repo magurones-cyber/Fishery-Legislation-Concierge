@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { KeyRound, Link as LinkIcon, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase";
 
 export function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("管理者から招待されたメールアドレスでログインしてください。");
@@ -19,7 +22,15 @@ export function LoginForm() {
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      setMessage(error ? "ログインできませんでした。招待済みメールとパスワードを確認してください。" : "ログインしました。初回ログイン時は同意確認へ進んでください。");
+      if (error) {
+        setMessage("ログインできませんでした。招待済みメールとパスワードを確認してください。");
+      } else {
+        const requestedNext = searchParams.get("next");
+        const next = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/dashboard";
+        setMessage("ログインしました。");
+        router.replace(next);
+        router.refresh();
+      }
     } catch {
       setMessage("Supabase環境変数が未設定です。運営者がProjectと環境変数を設定してください。");
     } finally {
@@ -36,7 +47,7 @@ export function LoginForm() {
         email,
         options: {
           shouldCreateUser: false,
-          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/consent` : undefined
+          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=/consent` : undefined
         }
       });
       setMessage(error ? "マジックリンクを送信できませんでした。招待済みメールか確認してください。" : "マジックリンクを送信しました。メールからログインしてください。");

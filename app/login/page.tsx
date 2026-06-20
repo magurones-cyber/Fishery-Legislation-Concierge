@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Anchor } from "lucide-react";
+import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -15,10 +15,9 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">自由サインアップではなく、管理者招待制です。</p>
         </CardHeader>
         <CardContent className="space-y-3">
-          <LoginForm />
-          <Link href="/dashboard" className="block text-center text-sm text-primary">
-            デモ画面を開く
-          </Link>
+          <Suspense fallback={<p className="text-sm text-muted-foreground">ログイン画面を準備しています。</p>}>
+            <LoginForm />
+          </Suspense>
         </CardContent>
       </Card>
     </main>

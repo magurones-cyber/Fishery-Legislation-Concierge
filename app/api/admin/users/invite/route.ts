@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase-admin";
+import { ADMIN_ROLES, hasAnyRole, requireApiAuth } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -14,28 +15,33 @@ const allowedRoles = new Set([
 ]);
 
 export async function POST(request: Request) {
-  const guard = assertAdminInviteRequest(request);
-  if (guard) return guard;
+  const auth = await requireApiAuth({ roles: ADMIN_ROLES });
+  if (auth.response) return auth.response;
 
   const body = await request.json().catch(() => null);
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const displayName = typeof body?.displayName === "string" ? body.displayName.trim() : "";
-  const organizationId = typeof body?.organizationId === "string" ? body.organizationId.trim() : "";
+  const requestedOrganizationId = typeof body?.organizationId === "string" ? body.organizationId.trim() : "";
+  const organizationId = hasAnyRole(auth.context, ["super_admin"]) && requestedOrganizationId ? requestedOrganizationId : auth.context.organizationId;
   const role = typeof body?.role === "string" ? body.role : "";
 
   if (!email || !displayName || !organizationId || !allowedRoles.has(role)) {
     return NextResponse.json({ error: "メール、表示名、organization、ロールを確認してください。" }, { status: 400 });
   }
+  if (role === "system_admin" && !hasAnyRole(auth.context, ["system_admin", "super_admin"])) {
+    return NextResponse.json({ error: "システム管理者を付与する権限がありません。" }, { status: 403 });
+  }
 
   try {
     const supabase = createServiceClient();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const invite = await supabase.auth.admin.inviteUserByEmail(email, {
       data: {
         display_name: displayName,
         organization_id: organizationId,
         role
       },
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/consent`
+      redirectTo: `${appUrl}/auth/callback?next=/auth/set-password`
     });
     if (invite.error || !invite.data.user) throw invite.error ?? new Error("invite failed");
 
@@ -63,6 +69,7 @@ export async function POST(request: Request) {
 
     await supabase.from("audit_logs").insert({
       organization_id: organizationId,
+      actor_id: auth.context.user.id,
       action: "user_invite",
       target_table: "users",
       target_id: userId,
@@ -73,20 +80,4 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "ユーザー招待に失敗しました。Supabase Auth設定とsecret keyを確認してください。" }, { status: 500 });
   }
-}
-
-function assertAdminInviteRequest(request: Request) {
-  const expectedToken = process.env.ADMIN_INVITE_TOKEN ?? process.env.ADMIN_UPLOAD_TOKEN;
-  const isProduction = process.env.NODE_ENV === "production";
-
-  if (!expectedToken && isProduction) {
-    return NextResponse.json({ error: "本番環境のユーザー招待には ADMIN_INVITE_TOKEN の設定が必要です。" }, { status: 503 });
-  }
-  if (!expectedToken) return null;
-
-  const actualToken = request.headers.get("x-admin-invite-token");
-  if (actualToken !== expectedToken) {
-    return NextResponse.json({ error: "ユーザー招待権限を確認できません。" }, { status: 401 });
-  }
-  return null;
 }

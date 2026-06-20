@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CURRENT_PRIVACY_POLICY_VERSION, CURRENT_TERMS_VERSION } from "@/lib/privacy/consent";
 
 export function ConsentForm() {
+  const router = useRouter();
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
   const [analysis, setAnalysis] = useState(false);
@@ -23,7 +25,9 @@ export function ConsentForm() {
     });
     if (response.ok) {
       setSaved(true);
-      setMessage("同意状態を確認しました。質問画面へ進めます。");
+      setMessage("同意履歴を保存しました。ホームへ移動します。");
+      router.replace("/dashboard");
+      router.refresh();
       return;
     }
     const payload = await response.json().catch(() => null);
@@ -53,11 +57,11 @@ export function ConsentForm() {
           同意する
         </Button>
         {message ? <p className="rounded-md border border-accent bg-accent/10 p-3">{message}</p> : null}
-        {saved ? <p className="text-xs text-muted-foreground">本番ではログインユーザーID、同意種別、規約版、日時、IP等を保存します。</p> : null}
+        {saved ? <p className="text-xs text-muted-foreground">ログインユーザーID、同意種別、規約版、日時、IP、User-Agentを保存しました。</p> : null}
         <div className="flex justify-between text-primary">
           <Link href="/terms">利用規約</Link>
           <Link href="/privacy">プライバシーポリシー</Link>
-          <Link href="/ask">質問画面</Link>
+          {saved ? <Link href="/dashboard">ホーム</Link> : null}
         </div>
       </CardContent>
     </Card>

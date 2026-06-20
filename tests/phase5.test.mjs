@@ -2,13 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-test("production document upload requires an admin upload token", () => {
+test("production document upload requires authenticated document editor role", () => {
   const route = readFileSync(new URL("../app/api/admin/documents/route.ts", import.meta.url), "utf8");
-  const env = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
 
-  assert.match(route, /ADMIN_UPLOAD_TOKEN/);
-  assert.match(route, /NODE_ENV === "production"/);
-  assert.match(env, /ADMIN_UPLOAD_TOKEN=change-this-before-production/);
+  assert.match(route, /requireApiAuth/);
+  assert.match(route, /DOCUMENT_EDITOR_ROLES/);
+  assert.doesNotMatch(route, /ADMIN_UPLOAD_TOKEN/);
 });
 
 test("document chunks and versions RLS are hardened by document visibility", () => {

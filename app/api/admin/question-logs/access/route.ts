@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { createServiceClient, getDefaultOrganizationId } from "@/lib/supabase-admin";
+import { createServiceClient } from "@/lib/supabase-admin";
+import { QUESTION_LOG_ADMIN_ROLES, requireApiAuth } from "@/lib/auth";
 import { findIndividualQuestionLog, questionLogAccessReasons } from "@/lib/question-log-analytics";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const guard = assertAdminLogAccessRequest(request);
-  if (guard) return guard;
+  const auth = await requireApiAuth({ roles: QUESTION_LOG_ADMIN_ROLES });
+  if (auth.response) return auth.response;
 
   const body = await request.json().catch(() => null);
   const logId = typeof body?.logId === "string" ? body.logId : "";
@@ -20,7 +21,8 @@ export async function POST(request: Request) {
   try {
     const supabase = createServiceClient();
     await supabase.from("audit_logs").insert({
-      organization_id: getDefaultOrganizationId(),
+      organization_id: auth.context.organizationId,
+      actor_id: auth.context.user.id,
       action: "question_log_detail_view",
       target_table: "qa_sessions",
       reason,
@@ -31,31 +33,11 @@ export async function POST(request: Request) {
       }
     });
   } catch {
-    if (process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "監査ログを保存できないため、個別ログを閲覧できません。" }, { status: 503 });
-    }
+    return NextResponse.json({ error: "監査ログを保存できないため、個別ログを閲覧できません。" }, { status: 503 });
   }
 
   const log = findIndividualQuestionLog(logId);
   if (!log) return NextResponse.json({ error: "対象ログが見つかりません。" }, { status: 404 });
 
   return NextResponse.json({ ok: true, log });
-}
-
-function assertAdminLogAccessRequest(request: Request) {
-  const expectedToken = process.env.ADMIN_LOG_ACCESS_TOKEN;
-  const isProduction = process.env.NODE_ENV === "production";
-
-  if (!expectedToken && isProduction) {
-    return NextResponse.json({ error: "本番環境の個別質問ログ閲覧には ADMIN_LOG_ACCESS_TOKEN 又はSupabase Auth接続が必要です。" }, { status: 503 });
-  }
-
-  if (!expectedToken) return null;
-
-  const actualToken = request.headers.get("x-admin-log-access-token");
-  if (actualToken !== expectedToken) {
-    return NextResponse.json({ error: "個別質問ログの閲覧権限を確認できません。" }, { status: 401 });
-  }
-
-  return null;
 }

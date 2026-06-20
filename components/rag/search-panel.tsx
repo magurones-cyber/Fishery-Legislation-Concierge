@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { SourceCard } from "@/components/rag/source-card";
 import { sourceTypeOptions } from "@/lib/rag/types";
 import { categoryOptions, recreationalFishingBoatTagSuggestions } from "@/lib/rag/categories";
-import type { AudienceRole, SearchResult } from "@/lib/rag/types";
+import type { SearchResult } from "@/lib/rag/types";
 
 export function SearchPanel() {
   const searchParams = useSearchParams();
@@ -32,7 +32,6 @@ export function SearchPanel() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         query: formData.get("query"),
-        role: formData.get("role") as AudienceRole,
         categoryId: formData.get("categoryId"),
         categoryCode,
         sourceType: formData.get("sourceType"),
@@ -62,13 +61,7 @@ export function SearchPanel() {
             <Search className="h-5 w-5" aria-hidden />
           </Button>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <select name="role" className="h-11 rounded-md border bg-background px-3 text-sm" defaultValue="public">
-            <option value="public">公開</option>
-            <option value="fisheries_coop_staff">漁協職員</option>
-            <option value="municipality_staff">自治体職員</option>
-            <option value="admin">管理者</option>
-          </select>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <select name="sourceType" className="h-11 rounded-md border bg-background px-3 text-sm" defaultValue="">
             <option value="">資料種別すべて</option>
             {sourceTypeOptions.map((option) => (

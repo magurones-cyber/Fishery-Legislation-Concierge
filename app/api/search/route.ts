@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
-import { createServiceClient, getDefaultOrganizationId } from "@/lib/supabase-admin";
+import { createServiceClient } from "@/lib/supabase-admin";
+import { audienceRoleFor, requireApiAuth } from "@/lib/auth";
 import { hybridSearch } from "@/lib/rag/search";
-import type { AudienceRole } from "@/lib/rag/types";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireApiAuth();
+    if (auth.response) return auth.response;
+
     const body = (await request.json()) as {
       query?: string;
-      role?: AudienceRole;
       categoryId?: string;
       categoryCode?: string;
       sourceType?: string;
@@ -23,8 +25,8 @@ export async function POST(request: Request) {
 
     const results = await hybridSearch(createServiceClient(), {
       query,
-      organizationId: getDefaultOrganizationId(),
-      role: body.role ?? "public",
+      organizationId: auth.context.organizationId,
+      role: audienceRoleFor(auth.context),
       categoryId: body.categoryId,
       categoryCode: body.categoryCode,
       sourceType: body.sourceType,
