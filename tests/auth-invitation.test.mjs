@@ -40,6 +40,10 @@ test("login supports password and magic link without free signup", () => {
   assert.match(login, /shouldCreateUser: false/);
   assert.match(login, /\/auth\/callback\?next=\/consent/);
   assert.match(read("app/auth/callback/route.ts"), /exchangeCodeForSession/);
+  const confirmRoute = read("app/auth/confirm/route.ts");
+  assert.match(confirmRoute, /verifyOtp/);
+  assert.match(confirmRoute, /token_hash/);
+  assert.match(read("middleware.ts"), /\/auth\/confirm/);
   assert.match(read("middleware.ts"), /supabase\.auth\.getUser/);
   assert.match(read("app/login/page.tsx"), /管理者招待制/);
 });

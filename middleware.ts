@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { CURRENT_PRIVACY_POLICY_VERSION, CURRENT_TERMS_VERSION } from "@/lib/privacy/consent";
 
-const PUBLIC_PATHS = ["/login", "/terms", "/privacy", "/auth/callback"];
+const PUBLIC_PATHS = ["/login", "/terms", "/privacy", "/auth/callback", "/auth/confirm"];
 const CONSENT_EXEMPT_PATHS = ["/consent", "/auth/set-password", "/auth/signout"];
 
 export async function middleware(request: NextRequest) {

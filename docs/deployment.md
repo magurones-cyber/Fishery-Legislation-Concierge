@@ -195,6 +195,15 @@ select public.bootstrap_auth_user(
 7. 招待利用者はメール内リンクでCookieセッションを作成し、パスワードを設定する。以後はパスワード又はマジックリンクでログインできる。
 8. `/admin` と管理APIはCookieセッション、所属、DBロール、同意履歴をサーバー側で確認する。管理用固定トークンは使用しない。
 
+### 認証メールのテンプレート
+
+Authentication > Emailsで、別端末やメール内ブラウザからも認証できるトークンハッシュ方式へ変更します。
+
+- Magic Link: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink&next=/consent`
+- Invite user: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/auth/set-password`
+
+リンク先の `/auth/confirm` は `verifyOtp` をサーバー側で実行し、成功時だけCookieセッションを発行します。Site URLとRedirect URLはAuthentication > URL Configurationで本番ドメインに限定し、認証メールのURLを運用ログへ保存しないでください。
+
 初期管理者の紐付け後は `bootstrap_auth_user` を通常運用で使いません。関数は `anon` と `authenticated` から実行できず、SQL Editorの運営者だけが実行できます。
 
 `SUPABASE_SECRET_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`OPENAI_API_KEY` はサーバー側のみで使用します。`NEXT_PUBLIC_` を付けず、ブラウザへ露出させません。`.env.local` はGitHubへコミットしません。
