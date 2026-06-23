@@ -29,13 +29,21 @@ export async function extractTextFromFile(file: File): Promise<ExtractionResult>
       status: "failed",
       errorMessage: "未対応のファイル形式です。Phase 1 は PDF、TXT、Markdown に対応しています。"
     };
-  } catch {
+  } catch (error) {
+    const errorCode = extractionErrorCode(error);
+    console.error("[rag:extract] PDF/text extraction failed", { errorCode });
     return {
       pages: [],
       status: "failed",
-      errorMessage: "テキスト抽出中にエラーが発生しました。"
+      errorMessage: `テキスト抽出中にエラーが発生しました。（${errorCode}）`
     };
   }
+}
+
+function extractionErrorCode(error: unknown) {
+  if (!(error instanceof Error)) return "UNKNOWN_EXTRACTION_ERROR";
+  const normalizedName = error.name.replace(/[^A-Za-z0-9_]/g, "").toUpperCase();
+  return normalizedName ? `PDF_${normalizedName}` : "PDF_EXTRACTION_ERROR";
 }
 
 async function extractPdfText(file: File): Promise<ExtractionResult> {
