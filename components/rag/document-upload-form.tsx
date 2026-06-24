@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Upload } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, CheckCircle2, ExternalLink, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +13,7 @@ type UploadState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "success"; message: string; documentId: string }
+  | { status: "warning"; message: string; documentId: string }
   | { status: "error"; message: string };
 
 export function DocumentUploadForm() {
@@ -34,10 +36,13 @@ export function DocumentUploadForm() {
       return;
     }
 
+    const searchable = data.status === "searchable";
     setState({
-      status: "success",
+      status: searchable ? "success" : "warning",
       documentId: data.documentId,
-      message: `登録完了: ${data.status} / チャンク ${data.chunks ?? 0} / Embedding ${data.embeddings ?? 0}${data.warning ? ` / ${data.warning}` : ""}`
+      message: searchable
+        ? `登録と本文抽出が完了しました。チャンク ${data.chunks ?? 0}件 / Embedding ${data.embeddings ?? 0}件${data.warning ? ` / ${data.warning}` : ""}`
+        : `資料情報と原本は登録済みですが、本文検索は未完了です。状態: ${data.status ?? "failed"}${data.warning ? ` / ${data.warning}` : ""}`
     });
     form.reset();
   }
@@ -102,7 +107,18 @@ export function DocumentUploadForm() {
         <Upload className="h-4 w-4" aria-hidden />
         {state.status === "loading" ? "登録・抽出中" : "資料を登録して検索可能にする"}
       </Button>
-      {state.status === "success" ? <p className="rounded-md border border-accent bg-accent/10 p-3 text-sm">{state.message}</p> : null}
+      {state.status === "success" ? (
+        <div className="space-y-2 rounded-md border border-accent bg-accent/10 p-3 text-sm">
+          <p className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{state.message}</p>
+          <Link href={`/documents/${state.documentId}`} className="inline-flex items-center gap-1 font-medium text-primary"><ExternalLink className="h-4 w-4" aria-hidden />登録資料を確認</Link>
+        </div>
+      ) : null}
+      {state.status === "warning" ? (
+        <div className="space-y-2 rounded-md border border-secondary bg-secondary/10 p-3 text-sm">
+          <p className="flex items-start gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{state.message}</p>
+          <Link href={`/documents/${state.documentId}`} className="inline-flex items-center gap-1 font-medium text-primary"><ExternalLink className="h-4 w-4" aria-hidden />登録済みの資料情報を確認</Link>
+        </div>
+      ) : null}
       {state.status === "error" ? <p className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm">{state.message}</p> : null}
     </form>
   );

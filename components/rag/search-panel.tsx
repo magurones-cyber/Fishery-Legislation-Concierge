@@ -16,9 +16,11 @@ export function SearchPanel() {
   const [message, setMessage] = useState("検索語を入力してください。");
   const [loading, setLoading] = useState(false);
   const [categoryCode, setCategoryCode] = useState("");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     setCategoryCode(searchParams.get("category") ?? "");
+    setQuery(searchParams.get("q") ?? "");
   }, [searchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -56,7 +58,7 @@ export function SearchPanel() {
     <div className="space-y-4">
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="flex gap-2">
-          <Input name="query" placeholder="条文番号、資料名、キーワード" required />
+          <Input name="query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="条文番号、資料名、キーワード" required />
           <Button size="icon" aria-label="検索" disabled={loading}>
             <Search className="h-5 w-5" aria-hidden />
           </Button>
@@ -71,7 +73,7 @@ export function SearchPanel() {
             ))}
           </select>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
           <select
             name="categoryCode"
             className="h-11 rounded-md border bg-background px-3 text-sm"
@@ -87,8 +89,7 @@ export function SearchPanel() {
           </select>
           <Input name="tag" placeholder="タグ" />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Input name="categoryId" placeholder="カテゴリID" />
+        <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
           <Input name="issuingAuthority" placeholder="所管" />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">

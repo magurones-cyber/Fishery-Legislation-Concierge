@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase-admin";
 import { audienceRoleFor, requireApiAuth } from "@/lib/auth";
-import { hybridSearch } from "@/lib/rag/search";
+import { hybridSearch, searchDocumentMetadata } from "@/lib/rag/search";
 
 export const runtime = "nodejs";
 
@@ -23,7 +23,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "検索語を入力してください。" }, { status: 400 });
     }
 
-    const results = await hybridSearch(createServiceClient(), {
+    const supabase = createServiceClient();
+    const params = {
       query,
       organizationId: auth.context.organizationId,
       role: audienceRoleFor(auth.context),
@@ -33,7 +34,14 @@ export async function POST(request: Request) {
       tag: body.tag,
       issuingAuthority: body.issuingAuthority,
       limit: 12
-    });
+    } as const;
+
+    const [chunkResults, metadataResults] = await Promise.all([
+      hybridSearch(supabase, params).catch(() => []),
+      searchDocumentMetadata(supabase, params)
+    ]);
+    const chunkDocumentIds = new Set(chunkResults.map((result) => result.document_id));
+    const results = [...chunkResults, ...metadataResults.filter((result) => !chunkDocumentIds.has(result.document_id))].slice(0, 12);
 
     return NextResponse.json({ results });
   } catch {

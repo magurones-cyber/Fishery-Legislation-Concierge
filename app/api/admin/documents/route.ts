@@ -96,8 +96,12 @@ export async function POST(request: Request) {
     }
 
     let embeddedCount = 0;
+    let embeddingFailed = false;
     for (const chunk of chunks) {
-      const embedding = await createEmbedding(chunk.content);
+      const embedding = await createEmbedding(chunk.content).catch(() => {
+        embeddingFailed = true;
+        return null;
+      });
       const { error: chunkError } = await supabase.from("document_chunks").insert({
         document_version_id: version.id,
         document_id: document.id,
@@ -112,6 +116,10 @@ export async function POST(request: Request) {
         embedding
       });
       if (chunkError) {
+        await supabase
+          .from("documents")
+          .update({ processing_status: "failed", processing_error: "チャンク保存に失敗しました。", processed_at: new Date().toISOString() })
+          .eq("id", document.id);
         return NextResponse.json({ error: "チャンク保存に失敗しました。", detail: chunkError.message }, { status: 500 });
       }
       if (embedding) embeddedCount += 1;
@@ -119,22 +127,30 @@ export async function POST(request: Request) {
 
     await upsertTags(supabase, organizationId, document.id, tags);
 
-    const finalStatus = extraction.status === "completed" ? "searchable" : extraction.status;
+    const finalStatus = extraction.status === "completed" && chunks.length > 0 ? "searchable" : extraction.status === "completed" ? "failed" : extraction.status;
+    const processingWarning = extraction.errorMessage
+      ?? (chunks.length === 0 ? "本文を抽出できませんでした。資料情報と原本のみ登録されています。" : null)
+      ?? (embeddingFailed ? "Embedding生成に失敗しました。キーワード検索は利用できます。" : null);
     await supabase
       .from("documents")
       .update({
         processing_status: finalStatus,
-        processing_error: extraction.errorMessage,
+        processing_error: processingWarning,
         processed_at: new Date().toISOString()
       })
       .eq("id", document.id);
+
+    await supabase
+      .from("document_versions")
+      .update({ extraction_status: finalStatus, extraction_error: processingWarning })
+      .eq("id", version.id);
 
     return NextResponse.json({
       documentId: document.id,
       status: finalStatus,
       chunks: chunks.length,
       embeddings: embeddedCount,
-      warning: extraction.errorMessage
+      warning: processingWarning
     });
   } catch {
     return NextResponse.json({ error: "資料登録処理でエラーが発生しました。" }, { status: 500 });

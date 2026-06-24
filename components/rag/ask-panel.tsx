@@ -19,8 +19,8 @@ const examples = [
   "補助対象経費に消費税を含めてよいですか。"
 ];
 
-export function AskPanel() {
-  const [question, setQuestion] = useState("");
+export function AskPanel({ initialQuestion = "" }: { initialQuestion?: string }) {
+  const [question, setQuestion] = useState(initialQuestion);
   const [answer, setAnswer] = useState("");
   const [confidence, setConfidence] = useState("");
   const [sources, setSources] = useState<SearchResult[]>([]);

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, ExternalLink } from "lucide-react";
-import type { SearchResult } from "@/lib/rag/types";
+import { sourceTypeLabel, visibilityLabel, type SearchResult } from "@/lib/rag/types";
 
 export function SourceCard({ source }: { source: SearchResult }) {
   return (
@@ -9,10 +9,10 @@ export function SourceCard({ source }: { source: SearchResult }) {
         <div className="min-w-0">
           <h3 className="font-semibold leading-snug">{source.title}</h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            {source.source_type} / {source.category_name ?? "カテゴリ未設定"}
+            {sourceTypeLabel(source.source_type)} / {source.category_name ?? "カテゴリ未設定"}
           </p>
         </div>
-        <span className="shrink-0 rounded-sm bg-muted px-2 py-1 text-xs">{Math.round(source.score * 100)}%</span>
+        <span className="shrink-0 rounded-sm bg-muted px-2 py-1 text-xs">{source.result_kind === "metadata" ? "資料名一致" : `${Math.round(source.score * 100)}%`}</span>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <div>
@@ -33,7 +33,7 @@ export function SourceCard({ source }: { source: SearchResult }) {
         </div>
         <div>
           <dt className="text-muted-foreground">公開範囲</dt>
-          <dd>{source.visibility}</dd>
+          <dd>{visibilityLabel(source.visibility)}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">所管</dt>
@@ -41,17 +41,24 @@ export function SourceCard({ source }: { source: SearchResult }) {
         </div>
       </dl>
       {source.heading ? <p className="mt-3 font-medium">{source.heading}</p> : null}
-      {!source.citation_text ? (
+      {source.result_kind === "metadata" ? (
+        <p className="mt-3 flex items-start gap-2 rounded-md border border-secondary bg-secondary/10 p-2 text-xs font-medium">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>資料情報が一致しました。{source.processing_status !== "searchable" ? `本文検索は未完了です（${source.processing_status}）。` : "引用は資料詳細で確認してください。"}</span>
+        </p>
+      ) : !source.citation_text ? (
         <p className="mt-3 flex items-center gap-2 rounded-md border border-secondary bg-secondary/10 p-2 text-xs font-medium">
           <AlertTriangle className="h-4 w-4" aria-hidden />
           引用文が未設定です。資料詳細で原文を確認してください。
         </p>
       ) : null}
-      <blockquote className="mt-3 border-l-4 border-primary bg-muted p-3 text-sm leading-relaxed">
-        {source.citation_text ?? source.content.slice(0, 260)}
-      </blockquote>
+      {source.result_kind !== "metadata" ? (
+        <blockquote className="mt-3 break-words border-l-4 border-primary bg-muted p-3 text-sm leading-relaxed">
+          {source.citation_text ?? source.content.slice(0, 260)}
+        </blockquote>
+      ) : null}
       <Link
-        href={`/documents/${source.document_id}?chunk=${source.chunk_id}`}
+        href={`/documents/${source.document_id}?chunk=${source.chunk_id}#chunk-${source.chunk_id}`}
         className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border bg-background px-4 text-sm font-medium active:bg-muted"
       >
         <ExternalLink className="h-4 w-4" aria-hidden />

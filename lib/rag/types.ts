@@ -70,7 +70,17 @@ export type SearchResult = {
   content: string;
   citation_text: string | null;
   score: number;
+  result_kind?: "chunk" | "metadata";
+  processing_status?: string;
 };
+
+export function sourceTypeLabel(value: string) {
+  return sourceTypeOptions.find((option) => option.value === value)?.label ?? value;
+}
+
+export function visibilityLabel(value: string) {
+  return visibilityOptions.find((option) => option.value === value)?.label ?? value;
+}
 
 export type RagAnswer = {
   answer: string;
