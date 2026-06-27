@@ -19,7 +19,7 @@
 
 1. 管理者または編集者が資料をアップロードする。
 2. Storage に原本を保存し、`documents` と `document_versions` に登録する。
-3. PDF、TXT、Markdown をテキスト抽出し、条文番号、見出し、ページ番号を保持してチャンク化する。
+3. PDF、TXT、Markdown、XML、RTF をテキスト抽出し、条文番号、見出し、ページ番号を保持してチャンク化する。
 4. Embeddings API で `document_chunks.embedding` を生成する。
 5. 質問時はベクトル検索、キーワード検索、条文番号検索、カテゴリ、タグ、資料種別、所管を組み合わせる。
 6. Responses API に検索結果と制約プロンプトを渡す。

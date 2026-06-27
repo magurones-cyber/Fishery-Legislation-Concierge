@@ -9,7 +9,7 @@ export default function AdminDocumentNewPage() {
         <Card>
           <CardHeader>
             <CardTitle>資料登録</CardTitle>
-            <p className="text-sm text-muted-foreground">PDF、TXT、Markdownを登録し、旧版を残したまま新しいバージョンとして処理します。</p>
+            <p className="text-sm text-muted-foreground">PDF、TXT、Markdown、XML、RTFを登録し、旧版を残したまま新しいバージョンとして処理します。</p>
           </CardHeader>
           <CardContent>
             <DocumentUploadForm />

@@ -212,7 +212,7 @@ async function registerDocumentFile({
 
   const finalStatus = chunks.length > 0 ? "searchable" : extraction.status;
   const processingWarning = extraction.errorMessage
-    ?? (extractedChunks.length === 0 ? "本文を抽出できませんでした。資料情報のみ検索対象として登録しました。PDF本文の検索にはOCR又はテキストPDFの再登録が必要です。" : null)
+    ?? (extractedChunks.length === 0 ? "本文を抽出できませんでした。資料情報のみ検索対象として登録しました。本文検索にはOCR、XML/RTF/TXT、又はテキスト抽出可能なPDFでの再登録が必要です。" : null)
     ?? (embeddingFailed ? "Embedding生成に失敗しました。キーワード検索は利用できます。" : null);
   await supabase
     .from("documents")
@@ -261,14 +261,14 @@ function buildMetadataChunk({
   extractionMessage: string | null;
 }): RagChunk {
   const content = [
-    "資料情報（PDF本文未抽出）",
+    "資料情報（本文未抽出）",
     `資料名: ${title}`,
     `資料種別: ${sourceType}`,
     documentNumber ? `法令番号: ${documentNumber}` : "",
     issuingAuthority ? `所管: ${issuingAuthority}` : "",
     `法的効力: ${legalEffect}`,
     notes ? `備考: ${notes}` : "",
-    extractionMessage ? `処理メモ: ${extractionMessage}` : "処理メモ: PDF本文を抽出できなかったため、資料情報のみを検索対象にしています。"
+    extractionMessage ? `処理メモ: ${extractionMessage}` : "処理メモ: 本文を抽出できなかったため、資料情報のみを検索対象にしています。"
   ]
     .filter(Boolean)
     .join("\n");
@@ -280,7 +280,7 @@ function buildMetadataChunk({
     articleNumber: null,
     heading: "資料情報（本文未抽出）",
     content,
-    citationText: "PDF本文は未抽出です。根拠確認は原本PDFを開いて行ってください。"
+    citationText: "本文は未抽出です。根拠確認は原本ファイルを開いて行ってください。"
   };
 }
 
@@ -307,6 +307,8 @@ function detectFileFormat(file: File) {
   const name = file.name.toLowerCase();
   if (file.type === "application/pdf" || name.endsWith(".pdf")) return "pdf";
   if (name.endsWith(".md") || name.endsWith(".markdown")) return "markdown";
+  if (file.type === "application/xml" || file.type === "text/xml" || name.endsWith(".xml")) return "xml";
+  if (file.type === "application/rtf" || file.type === "text/rtf" || file.type === "application/x-rtf" || name.endsWith(".rtf")) return "rtf";
   if (file.type === "text/plain" || name.endsWith(".txt")) return "txt";
   return "unknown";
 }

@@ -15,3 +15,12 @@ test("PDF extraction reports a sanitized error code without file contents", () =
   assert.match(extract, /replace\(\/\[\^A-Za-z0-9_\]\/g/);
   assert.doesNotMatch(extract, /console\.error\([^\n]*error\.message/);
 });
+
+test("text extraction supports XML and RTF documents", () => {
+  const extract = read("lib/rag/extract.ts");
+  assert.match(extract, /isXmlFile/);
+  assert.match(extract, /extractXmlText/);
+  assert.match(extract, /isRtfFile/);
+  assert.match(extract, /extractRtfText/);
+  assert.match(extract, /XML、RTF/);
+});

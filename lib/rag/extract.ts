@@ -20,6 +20,22 @@ export async function extractTextFromFile(file: File): Promise<ExtractionResult>
       };
     }
 
+    if (isXmlFile(fileName, mime)) {
+      return {
+        pages: [{ pageNumber: 1, text: extractXmlText(await file.text()) }],
+        status: "completed",
+        errorMessage: null
+      };
+    }
+
+    if (isRtfFile(fileName, mime)) {
+      return {
+        pages: [{ pageNumber: 1, text: extractRtfText(await file.text()) }],
+        status: "completed",
+        errorMessage: null
+      };
+    }
+
     if (mime === "application/pdf" || fileName.endsWith(".pdf")) {
       const bytes = new Uint8Array(await file.arrayBuffer());
       return await extractPdfText(bytes).catch((error) => fallbackExtractPdfText(bytes, error));
@@ -28,7 +44,7 @@ export async function extractTextFromFile(file: File): Promise<ExtractionResult>
     return {
       pages: [],
       status: "failed",
-      errorMessage: "未対応のファイル形式です。Phase 1 は PDF、TXT、Markdown に対応しています。"
+      errorMessage: "未対応のファイル形式です。PDF、TXT、Markdown、XML、RTFに対応しています。"
     };
   } catch (error) {
     const errorCode = extractionErrorCode(error);
@@ -39,6 +55,49 @@ export async function extractTextFromFile(file: File): Promise<ExtractionResult>
       errorMessage: `テキスト抽出中にエラーが発生しました。（${errorCode}）`
     };
   }
+}
+
+function isXmlFile(fileName: string, mime: string) {
+  return fileName.endsWith(".xml") || mime === "application/xml" || mime === "text/xml";
+}
+
+function isRtfFile(fileName: string, mime: string) {
+  return fileName.endsWith(".rtf") || mime === "application/rtf" || mime === "text/rtf" || mime === "application/x-rtf";
+}
+
+function extractXmlText(xml: string) {
+  const withStructureBreaks = xml
+    .replace(/<\?xml[\s\S]*?\?>/g, "\n")
+    .replace(/<!--[\s\S]*?-->/g, "\n")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/<\/(Article|Paragraph|Item|Chapter|Section|Subsection|Division|ArticleCaption|ParagraphSentence|Sentence)>/g, "\n")
+    .replace(/<[^>]+>/g, " ");
+  return normalizeText(decodeXmlEntities(withStructureBreaks));
+}
+
+function decodeXmlEntities(text: string) {
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+function extractRtfText(rtf: string) {
+  const unicodeDecoded = rtf.replace(/\\u(-?\d+)\??/g, (_match: string, code: string) => {
+    const value = Number.parseInt(code, 10);
+    return Number.isFinite(value) ? String.fromCharCode(value < 0 ? value + 65536 : value) : "";
+  });
+  const text = unicodeDecoded
+    .replace(/\\'[0-9a-fA-F]{2}/g, " ")
+    .replace(/\\par[d]?/g, "\n")
+    .replace(/\\line/g, "\n")
+    .replace(/\\tab/g, "\t")
+    .replace(/\\[a-zA-Z]+-?\d* ?/g, "")
+    .replace(/[{}]/g, " ")
+    .replace(/\\[~_\-]/g, " ");
+  return normalizeText(text);
 }
 
 function extractionErrorCode(error: unknown) {

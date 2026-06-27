@@ -34,7 +34,11 @@ export function DocumentUploadForm() {
   const [dragging, setDragging] = useState(false);
 
   function addFiles(nextFiles: FileList | File[]) {
-    const allowed = Array.from(nextFiles).filter((file) => /\.(pdf|txt|md|markdown)$/i.test(file.name) || ["application/pdf", "text/plain", "text/markdown"].includes(file.type));
+    const allowed = Array.from(nextFiles).filter(
+      (file) =>
+        /\.(pdf|txt|md|markdown|xml|rtf)$/i.test(file.name) ||
+        ["application/pdf", "text/plain", "text/markdown", "application/xml", "text/xml", "application/rtf", "text/rtf", "application/x-rtf"].includes(file.type)
+    );
     setFiles((current) => {
       const existing = new Set(current.map((file) => `${file.name}:${file.size}`));
       return [...current, ...allowed.filter((file) => !existing.has(`${file.name}:${file.size}`))];
@@ -84,7 +88,7 @@ export function DocumentUploadForm() {
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="flex h-11 items-center gap-2 rounded-md border bg-background px-3 text-sm">
           <input name="categoryMode" type="checkbox" value="auto" defaultChecked className="h-4 w-4 accent-primary" />
-          PDF/TXT内容からカテゴリ自動判定
+          本文からカテゴリ自動判定
         </label>
         <select name="categoryCode" className="h-11 rounded-md border bg-background px-3 text-sm" defaultValue="99">
           {categoryOptions.map((option) => (
@@ -143,9 +147,16 @@ export function DocumentUploadForm() {
         onDrop={handleDrop}
         className={dragging ? "block rounded-md border border-primary bg-primary/10 p-4 text-sm" : "block rounded-md border bg-background p-4 text-sm"}
       >
-        <span className="mb-2 block font-medium">ファイル（PDF / TXT / Markdown、複数可）</span>
+        <span className="mb-2 block font-medium">ファイル（PDF / TXT / Markdown / XML / RTF、複数可）</span>
         <span className="mb-3 block text-xs text-muted-foreground">ここへドラッグ&ドロップ、またはファイルを選択してください。</span>
-        <input name="files" type="file" accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" multiple className="w-full text-sm" onChange={(event) => event.target.files && addFiles(event.target.files)} />
+        <input
+          name="files"
+          type="file"
+          accept=".pdf,.txt,.md,.markdown,.xml,.rtf,application/pdf,text/plain,text/markdown,application/xml,text/xml,application/rtf,text/rtf,application/x-rtf"
+          multiple
+          className="w-full text-sm"
+          onChange={(event) => event.target.files && addFiles(event.target.files)}
+        />
       </label>
       {files.length > 0 ? (
         <div className="space-y-2 rounded-md border bg-muted p-3 text-sm">

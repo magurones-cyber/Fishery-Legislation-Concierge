@@ -64,8 +64,12 @@ test("document management supports batch upload, auto category, edit, and logica
 
   assert.match(uploadForm, /onDrop=/);
   assert.match(uploadForm, /multiple/);
+  assert.match(uploadForm, /\.xml/);
+  assert.match(uploadForm, /\.rtf/);
   assert.match(uploadForm, /categoryMode/);
   assert.match(uploadRoute, /formData\.getAll\("files"\)/);
+  assert.match(uploadRoute, /return "xml"/);
+  assert.match(uploadRoute, /return "rtf"/);
   assert.match(uploadRoute, /classifyCategoryCode/);
   assert.match(uploadRoute, /buildMetadataChunk/);
   assert.match(uploadRoute, /資料情報のみ検索対象として登録/);

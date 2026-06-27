@@ -45,7 +45,7 @@
 
 ## Phase 1 追加 UI
 
-- `/admin/documents`: PDF、TXT、Markdown 登録フォーム、登録結果、処理エラー表示
+- `/admin/documents`: PDF、TXT、Markdown、XML、RTF 登録フォーム、登録結果、処理エラー表示
 - `/search`: ハイブリッド検索フォーム、資料種別・公開ロール・タグ・所管フィルタ、引用カード
 - `/ask`: 質問フォーム、初期質問例、根拠付き回答、信頼度、引用カード、根拠不足警告
 - `/dashboard`: よく使うメニューに「遊漁船」を追加し、カテゴリ12検索へ遷移

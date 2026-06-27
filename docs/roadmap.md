@@ -12,7 +12,7 @@
 
 - Storage アップロード
 - 資料メタデータ管理
-- PDF / TXT / Markdown テキスト抽出
+- PDF / TXT / Markdown / XML / RTF テキスト抽出
 - チャンク分割
 - Embeddings API
 - pgvector 検索
