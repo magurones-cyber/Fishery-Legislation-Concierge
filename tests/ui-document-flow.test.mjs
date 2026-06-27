@@ -51,12 +51,15 @@ test("mobile shell prevents horizontal overflow", async () => {
 });
 
 test("document management supports batch upload, auto category, edit, and logical delete", async () => {
-  const [uploadForm, uploadRoute, editRoute, adminDetail, classifier] = await Promise.all([
+  const [uploadForm, uploadRoute, editRoute, adminDetail, classifier, documentsLib, documentsPage, adminDocumentsPage] = await Promise.all([
     readFile("components/rag/document-upload-form.tsx", "utf8"),
     readFile("app/api/admin/documents/route.ts", "utf8"),
     readFile("app/api/admin/documents/[id]/route.ts", "utf8"),
     readFile("app/admin/documents/[id]/page.tsx", "utf8"),
-    readFile("lib/rag/category-classifier.ts", "utf8")
+    readFile("lib/rag/category-classifier.ts", "utf8"),
+    readFile("lib/documents.ts", "utf8"),
+    readFile("app/documents/page.tsx", "utf8"),
+    readFile("app/admin/documents/page.tsx", "utf8")
   ]);
 
   assert.match(uploadForm, /onDrop=/);
@@ -64,10 +67,15 @@ test("document management supports batch upload, auto category, edit, and logica
   assert.match(uploadForm, /categoryMode/);
   assert.match(uploadRoute, /formData\.getAll\("files"\)/);
   assert.match(uploadRoute, /classifyCategoryCode/);
+  assert.match(uploadRoute, /buildMetadataChunk/);
+  assert.match(uploadRoute, /資料情報のみ検索対象として登録/);
   assert.match(editRoute, /export async function PATCH/);
   assert.match(editRoute, /export async function DELETE/);
   assert.match(editRoute, /deleted_at/);
   assert.match(adminDetail, /DocumentEditForm/);
   assert.match(classifier, /漁港/);
   assert.match(classifier, /補助金/);
+  assert.match(documentsLib, /\.is\("deleted_at", null\)/);
+  assert.match(documentsPage, /document\.processingError/);
+  assert.match(adminDocumentsPage, /Boolean\(document\.processingError\)/);
 });

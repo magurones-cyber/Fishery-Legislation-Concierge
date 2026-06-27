@@ -22,10 +22,12 @@ export default async function DocumentsPage() {
                 <p className="mt-2 text-xs text-muted-foreground">
                   {sourceTypeLabel(document.sourceType)} / {document.pageCount ?? "-"}ページ / 更新日 {new Date(document.updatedAt).toLocaleDateString("ja-JP")}
                 </p>
-                {document.processingStatus !== "searchable" ? (
+                {document.processingStatus !== "searchable" || document.processingError ? (
                   <p className="mt-2 flex items-start gap-1 rounded-md border border-secondary bg-secondary/10 p-2 text-xs">
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                    本文検索未完了（{document.processingStatus}）。資料情報と原本は確認できます。
+                    {document.processingStatus === "searchable"
+                      ? document.processingError
+                      : `本文検索未完了（${document.processingStatus}）。資料情報と原本は確認できます。`}
                   </p>
                 ) : null}
               </div>

@@ -6,6 +6,7 @@ import { classifyCategoryCode } from "@/lib/rag/category-classifier";
 import { extractTextFromFile } from "@/lib/rag/extract";
 import { createEmbedding } from "@/lib/rag/openai";
 import { createStorageAdapter, getDocumentBucket } from "@/lib/storage";
+import type { RagChunk } from "@/lib/rag/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -146,7 +147,20 @@ async function registerDocumentFile({
     return { fileName: file.name, error: "資料メタデータの登録に失敗しました。", detail: documentError?.message };
   }
 
-  const chunks = extraction.status === "completed" ? chunkPages(extraction.pages, sourceType) : [];
+  const extractedChunks = extraction.status === "completed" ? chunkPages(extraction.pages, sourceType) : [];
+  const chunks = extractedChunks.length > 0
+    ? extractedChunks
+    : [
+        buildMetadataChunk({
+          title,
+          sourceType,
+          legalEffect: readString(formData, "legalEffect") || legalEffectFor(sourceType),
+          documentNumber: readString(formData, "documentNumber"),
+          issuingAuthority: readString(formData, "issuingAuthority"),
+          notes: readString(formData, "notes"),
+          extractionMessage: extraction.errorMessage
+        })
+      ];
   const { data: version, error: versionError } = await supabase
     .from("document_versions")
     .insert({
@@ -196,9 +210,9 @@ async function registerDocumentFile({
 
   await upsertTags(supabase, organizationId, document.id, tags);
 
-  const finalStatus = extraction.status === "completed" && chunks.length > 0 ? "searchable" : extraction.status === "completed" ? "failed" : extraction.status;
+  const finalStatus = chunks.length > 0 ? "searchable" : extraction.status;
   const processingWarning = extraction.errorMessage
-    ?? (chunks.length === 0 ? "本文を抽出できませんでした。資料情報と原本のみ登録されています。" : null)
+    ?? (extractedChunks.length === 0 ? "本文を抽出できませんでした。資料情報のみ検索対象として登録しました。PDF本文の検索にはOCR又はテキストPDFの再登録が必要です。" : null)
     ?? (embeddingFailed ? "Embedding生成に失敗しました。キーワード検索は利用できます。" : null);
   await supabase
     .from("documents")
@@ -226,6 +240,47 @@ async function registerDocumentFile({
     chunks: chunks.length,
     embeddings: embeddedCount,
     warning: processingWarning
+  };
+}
+
+function buildMetadataChunk({
+  title,
+  sourceType,
+  legalEffect,
+  documentNumber,
+  issuingAuthority,
+  notes,
+  extractionMessage
+}: {
+  title: string;
+  sourceType: string;
+  legalEffect: string;
+  documentNumber: string;
+  issuingAuthority: string;
+  notes: string;
+  extractionMessage: string | null;
+}): RagChunk {
+  const content = [
+    "資料情報（PDF本文未抽出）",
+    `資料名: ${title}`,
+    `資料種別: ${sourceType}`,
+    documentNumber ? `法令番号: ${documentNumber}` : "",
+    issuingAuthority ? `所管: ${issuingAuthority}` : "",
+    `法的効力: ${legalEffect}`,
+    notes ? `備考: ${notes}` : "",
+    extractionMessage ? `処理メモ: ${extractionMessage}` : "処理メモ: PDF本文を抽出できなかったため、資料情報のみを検索対象にしています。"
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    chunkIndex: 0,
+    pageStart: 1,
+    pageEnd: 1,
+    articleNumber: null,
+    heading: "資料情報（本文未抽出）",
+    content,
+    citationText: "PDF本文は未抽出です。根拠確認は原本PDFを開いて行ってください。"
   };
 }
 

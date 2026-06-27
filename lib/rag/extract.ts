@@ -49,7 +49,13 @@ function extractionErrorCode(error: unknown) {
 
 async function extractPdfText(bytes: Uint8Array): Promise<ExtractionResult> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const loadingTask = pdfjs.getDocument({ data: bytes, useWorkerFetch: false, isEvalSupported: false });
+  const loadingTask = pdfjs.getDocument({
+    data: bytes,
+    disableFontFace: true,
+    isEvalSupported: false,
+    useSystemFonts: true,
+    useWorkerFetch: false
+  });
   const pdf = await loadingTask.promise;
   const pages: ExtractedPage[] = [];
 

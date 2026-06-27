@@ -25,7 +25,7 @@ export default async function AdminDocumentsPage() {
             {error ? <p className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
             {!error && documents.length === 0 ? <p className="text-sm text-muted-foreground">登録資料はありません。</p> : null}
             {documents.map((document) => {
-              const hasProcessingIssue = document.processingStatus !== "searchable";
+              const hasProcessingIssue = document.processingStatus !== "searchable" || Boolean(document.processingError);
               const overdue = Boolean(document.nextCheckedAt && new Date(document.nextCheckedAt) < new Date());
               return (
                 <Link key={document.id} href={`/admin/documents/${document.id}`} className="block">
@@ -40,7 +40,8 @@ export default async function AdminDocumentsPage() {
                     {hasProcessingIssue ? (
                       <p className="mt-2 flex items-start gap-2 rounded-md bg-secondary/10 p-2 text-xs font-medium">
                         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                        本文検索未完了。{document.processingError ?? "処理状態を確認してください。"}
+                        {document.processingStatus === "searchable" ? "注意: " : "本文検索未完了。"}
+                        {document.processingError ?? "処理状態を確認してください。"}
                       </p>
                     ) : null}
                     {overdue ? <p className="mt-2 text-xs font-medium text-destructive">更新確認期限を過ぎています（{document.nextCheckedAt}）。</p> : null}

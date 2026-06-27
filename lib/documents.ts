@@ -87,7 +87,12 @@ const documentFields = [
 
 export async function listReadableDocuments(): Promise<{ documents: DocumentSummary[]; error: string | null }> {
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.from("documents").select(documentFields).order("updated_at", { ascending: false }).limit(200);
+  const { data, error } = await supabase
+    .from("documents")
+    .select(documentFields)
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false })
+    .limit(200);
   if (error) return { documents: [], error: "登録資料を読み込めませんでした。" };
 
   const rows = (data ?? []) as unknown as DocumentRow[];
@@ -100,7 +105,7 @@ export async function getReadableDocument(id: string): Promise<{
   fileUrl: string | null;
 }> {
   const supabase = await createServerSupabaseClient();
-  const { data } = await supabase.from("documents").select(documentFields).eq("id", id).maybeSingle();
+  const { data } = await supabase.from("documents").select(documentFields).eq("id", id).is("deleted_at", null).maybeSingle();
   if (!data) return { document: null, chunks: [], fileUrl: null };
 
   const [document] = await enrichDocuments(supabase, [data as unknown as DocumentRow]);
