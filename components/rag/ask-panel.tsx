@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AlertTriangle, CheckCircle2, Send, ThumbsDown, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,7 @@ const examples = [
   "補助対象経費に消費税を含めてよいですか。"
 ];
 
-export function AskPanel({ initialQuestion = "" }: { initialQuestion?: string }) {
+export function AskPanel({ autoSubmit = false, initialQuestion = "" }: { autoSubmit?: boolean; initialQuestion?: string }) {
   const [question, setQuestion] = useState(initialQuestion);
   const [answer, setAnswer] = useState("");
   const [confidence, setConfidence] = useState("");
@@ -29,11 +29,16 @@ export function AskPanel({ initialQuestion = "" }: { initialQuestion?: string })
   const [maskConfirmed, setMaskConfirmed] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackReason, setFeedbackReason] = useState("");
+  const autoSubmittedRef = useRef(false);
 
   const masking = useMemo(() => maskSensitiveText(question), [question]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const submitQuestion = useCallback(async () => {
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion) {
+      setMessage("質問を入力してください。");
+      return;
+    }
     if (masking.containsPersonalData && !maskConfirmed) {
       setMessage("個人情報らしき内容を検知しました。マスキング前後を確認し、確認チェックを入れてください。");
       return;
@@ -46,7 +51,7 @@ export function AskPanel({ initialQuestion = "" }: { initialQuestion?: string })
     const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ question })
+      body: JSON.stringify({ question: trimmedQuestion })
     });
     const data = (await response.json()) as {
       answer?: string;
@@ -73,7 +78,20 @@ export function AskPanel({ initialQuestion = "" }: { initialQuestion?: string })
           ? "根拠資料が不足しています。回答は断定できません。"
           : "根拠付き回答を生成しました。"
     );
+  }, [maskConfirmed, masking.containsPersonalData, question]);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void submitQuestion();
   }
+
+  useEffect(() => {
+    if (!autoSubmit || autoSubmittedRef.current || !initialQuestion.trim()) {
+      return;
+    }
+    autoSubmittedRef.current = true;
+    void submitQuestion();
+  }, [autoSubmit, initialQuestion, submitQuestion]);
 
   return (
     <div className="space-y-4">

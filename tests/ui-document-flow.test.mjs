@@ -3,18 +3,23 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("dashboard carries entered text to ask and search", async () => {
-  const [entry, askPage, askPanel, searchPanel] = await Promise.all([
+  const [entry, askPage, askPanel, searchPanel, dashboard] = await Promise.all([
     readFile("components/dashboard/question-entry.tsx", "utf8"),
     readFile("app/ask/page.tsx", "utf8"),
     readFile("components/rag/ask-panel.tsx", "utf8"),
-    readFile("components/rag/search-panel.tsx", "utf8")
+    readFile("components/rag/search-panel.tsx", "utf8"),
+    readFile("app/dashboard/page.tsx", "utf8")
   ]);
 
-  assert.match(entry, /encodeURIComponent\(query\)/);
-  assert.match(entry, /\?q=/);
+  assert.match(entry, /params\.set\("q", query\)/);
+  assert.match(entry, /params\.set\("auto", "1"\)/);
   assert.match(askPage, /initialQuestion=/);
+  assert.match(askPage, /autoSubmit=/);
   assert.match(askPanel, /useState\(initialQuestion\)/);
+  assert.match(askPanel, /autoSubmittedRef/);
   assert.match(searchPanel, /searchParams\.get\("q"\)/);
+  assert.match(dashboard, /listRecentQuestions/);
+  assert.doesNotMatch(dashboard, /recentQuestions } from "@\/lib\/mock-data"/);
 });
 
 test("document screens use Supabase-backed document queries", async () => {
@@ -43,4 +48,26 @@ test("mobile shell prevents horizontal overflow", async () => {
   assert.match(globalCss, /overflow-x: hidden/);
   assert.match(shell, /min-w-0 overflow-x-clip/);
   assert.match(dashboard, /grid-cols-2/);
+});
+
+test("document management supports batch upload, auto category, edit, and logical delete", async () => {
+  const [uploadForm, uploadRoute, editRoute, adminDetail, classifier] = await Promise.all([
+    readFile("components/rag/document-upload-form.tsx", "utf8"),
+    readFile("app/api/admin/documents/route.ts", "utf8"),
+    readFile("app/api/admin/documents/[id]/route.ts", "utf8"),
+    readFile("app/admin/documents/[id]/page.tsx", "utf8"),
+    readFile("lib/rag/category-classifier.ts", "utf8")
+  ]);
+
+  assert.match(uploadForm, /onDrop=/);
+  assert.match(uploadForm, /multiple/);
+  assert.match(uploadForm, /categoryMode/);
+  assert.match(uploadRoute, /formData\.getAll\("files"\)/);
+  assert.match(uploadRoute, /classifyCategoryCode/);
+  assert.match(editRoute, /export async function PATCH/);
+  assert.match(editRoute, /export async function DELETE/);
+  assert.match(editRoute, /deleted_at/);
+  assert.match(adminDetail, /DocumentEditForm/);
+  assert.match(classifier, /漁港/);
+  assert.match(classifier, /補助金/);
 });

@@ -28,7 +28,7 @@ export default async function AdminDocumentsPage() {
               const hasProcessingIssue = document.processingStatus !== "searchable";
               const overdue = Boolean(document.nextCheckedAt && new Date(document.nextCheckedAt) < new Date());
               return (
-                <Link key={document.id} href={`/documents/${document.id}`} className="block">
+                <Link key={document.id} href={`/admin/documents/${document.id}`} className="block">
                   <article className={hasProcessingIssue || overdue ? "rounded-md border border-secondary bg-background p-3" : "rounded-md border bg-background p-3"}>
                     <div className="flex min-w-0 items-start justify-between gap-3">
                       <div className="min-w-0">

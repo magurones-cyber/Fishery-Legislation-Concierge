@@ -13,8 +13,10 @@ export type DocumentSummary = {
   documentNumber: string | null;
   effectiveDate: string | null;
   lastAmendedAt: string | null;
+  sourceUrl: string | null;
   updatedAt: string;
   visibility: Visibility;
+  updateCycle: string | null;
   processingStatus: string;
   processingError: string | null;
   fileFormat: string | null;
@@ -46,8 +48,10 @@ type DocumentRow = {
   document_number: string | null;
   effective_date: string | null;
   last_amended_at: string | null;
+  source_url: string | null;
   updated_at: string;
   visibility: Visibility;
+  update_cycle: string | null;
   processing_status: string;
   processing_error: string | null;
   file_format: string | null;
@@ -69,8 +73,10 @@ const documentFields = [
   "document_number",
   "effective_date",
   "last_amended_at",
+  "source_url",
   "updated_at",
   "visibility",
+  "update_cycle",
   "processing_status",
   "processing_error",
   "file_format",
@@ -173,8 +179,10 @@ async function enrichDocuments(
       documentNumber: row.document_number,
       effectiveDate: row.effective_date,
       lastAmendedAt: row.last_amended_at,
+      sourceUrl: row.source_url,
       updatedAt: row.updated_at,
       visibility: row.visibility,
+      updateCycle: row.update_cycle,
       processingStatus: row.processing_status,
       processingError: row.processing_error,
       fileFormat: row.file_format,

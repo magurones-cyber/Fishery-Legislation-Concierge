@@ -12,7 +12,14 @@ export function QuestionEntry() {
   function navigate(event: FormEvent<HTMLFormElement>, destination: "ask" | "search") {
     event.preventDefault();
     const query = question.trim();
-    const suffix = query ? `?q=${encodeURIComponent(query)}` : "";
+    const params = new URLSearchParams();
+    if (query) {
+      params.set("q", query);
+    }
+    if (destination === "ask" && query) {
+      params.set("auto", "1");
+    }
+    const suffix = params.toString() ? `?${params.toString()}` : "";
     router.push(`/${destination}${suffix}`);
   }
 

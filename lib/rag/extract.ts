@@ -21,7 +21,8 @@ export async function extractTextFromFile(file: File): Promise<ExtractionResult>
     }
 
     if (mime === "application/pdf" || fileName.endsWith(".pdf")) {
-      return await extractPdfText(file);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      return await extractPdfText(bytes).catch((error) => fallbackExtractPdfText(bytes, error));
     }
 
     return {
@@ -46,9 +47,8 @@ function extractionErrorCode(error: unknown) {
   return normalizedName ? `PDF_${normalizedName}` : "PDF_EXTRACTION_ERROR";
 }
 
-async function extractPdfText(file: File): Promise<ExtractionResult> {
+async function extractPdfText(bytes: Uint8Array): Promise<ExtractionResult> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const bytes = new Uint8Array(await file.arrayBuffer());
   const loadingTask = pdfjs.getDocument({ data: bytes, useWorkerFetch: false, isEvalSupported: false });
   const pdf = await loadingTask.promise;
   const pages: ExtractedPage[] = [];
@@ -68,4 +68,38 @@ async function extractPdfText(file: File): Promise<ExtractionResult> {
     status: totalTextLength > 0 ? "completed" : "ocr_required",
     errorMessage: totalTextLength > 0 ? null : "PDFからテキストを抽出できませんでした。OCR未処理として登録しました。"
   };
+}
+
+function fallbackExtractPdfText(bytes: Uint8Array, error: unknown): ExtractionResult {
+  const errorCode = extractionErrorCode(error);
+  console.error("[rag:extract] PDF.js extraction failed; trying fallback", { errorCode });
+  const binary = new TextDecoder("latin1").decode(bytes);
+  const literalStrings = [...binary.matchAll(/\(([^()]{2,})\)\s*Tj/g)].map((match) => decodePdfLiteral(match[1] ?? ""));
+  const arrayStrings = [...binary.matchAll(/\[((?:\s*\([^()]{1,}\)\s*){1,})\]\s*TJ/g)]
+    .map((match) => [...(match[1] ?? "").matchAll(/\(([^()]{1,})\)/g)].map((item) => decodePdfLiteral(item[1] ?? "")).join(""));
+  const text = normalizeText([...literalStrings, ...arrayStrings].join(" "));
+
+  if (text.length > 0) {
+    return {
+      pages: [{ pageNumber: 1, text }],
+      status: "completed",
+      errorMessage: `PDF.jsでのページ単位抽出に失敗したため、簡易抽出で登録しました。（${errorCode}）`
+    };
+  }
+
+  return {
+    pages: [],
+    status: "failed",
+    errorMessage: `テキスト抽出中にエラーが発生しました。（${errorCode}）`
+  };
+}
+
+function decodePdfLiteral(value: string) {
+  return value
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")")
+    .replace(/\\\\/g, "\\");
 }
