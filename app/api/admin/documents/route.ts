@@ -13,6 +13,7 @@ export const maxDuration = 60;
 
 const MAX_SEARCHABLE_CHUNKS_PER_DOCUMENT = 180;
 const MAX_EMBEDDED_CHUNKS_PER_DOCUMENT = 12;
+const MAX_FILES_PER_REQUEST = 5;
 
 type RegistrationResult = {
   documentId?: string;
@@ -39,6 +40,12 @@ export async function POST(request: Request) {
     );
     if (files.length === 0) {
       return NextResponse.json({ error: "ファイルを選択してください。" }, { status: 400 });
+    }
+    if (files.length > MAX_FILES_PER_REQUEST) {
+      return NextResponse.json(
+        { error: `一度のAPI登録は${MAX_FILES_PER_REQUEST}件までです。画面から登録すると自動で分割処理されます。` },
+        { status: 413 }
+      );
     }
 
     const supabase = createServiceClient();

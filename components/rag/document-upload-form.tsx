@@ -24,7 +24,7 @@ type UploadResult = {
 
 type UploadState =
   | { status: "idle" }
-  | { status: "loading" }
+  | { status: "loading"; processed: number; total: number; currentFile?: string; results: UploadResult[] }
   | { status: "done"; results: UploadResult[] }
   | { status: "error"; message: string };
 
@@ -59,25 +59,43 @@ export function DocumentUploadForm() {
     }
 
     const form = event.currentTarget;
-    const formData = new FormData(form);
-    formData.delete("files");
-    for (const file of files) {
+    const pendingFiles = [...files];
+    const results: UploadResult[] = [];
+    setState({ status: "loading", processed: 0, total: pendingFiles.length, results });
+
+    for (const [index, file] of pendingFiles.entries()) {
+      setState({ status: "loading", processed: index, total: pendingFiles.length, currentFile: file.name, results: [...results] });
+      const formData = new FormData(form);
+      formData.delete("files");
+      formData.delete("file");
       formData.append("files", file);
+
+      try {
+        const response = await fetch("/api/admin/documents", {
+          method: "POST",
+          body: formData
+        });
+        const data = (await response.json().catch(() => ({}))) as { error?: string; results?: UploadResult[] } & UploadResult;
+        const result = data.results?.[0] ?? data;
+        results.push(
+          response.ok && !data.error
+            ? result
+            : {
+                fileName: file.name,
+                status: "failed",
+                error: data.error ?? "登録に失敗しました。"
+              }
+        );
+      } catch {
+        results.push({
+          fileName: file.name,
+          status: "failed",
+          error: "通信が中断されました。時間を置いて再登録してください。"
+        });
+      }
     }
-    setState({ status: "loading" });
 
-    const response = await fetch("/api/admin/documents", {
-      method: "POST",
-      body: formData
-    });
-    const data = (await response.json()) as { error?: string; results?: UploadResult[] } & UploadResult;
-
-    if (!response.ok || data.error) {
-      setState({ status: "error", message: data.error ?? "登録に失敗しました。" });
-      return;
-    }
-
-    setState({ status: "done", results: data.results ?? [data] });
+    setState({ status: "done", results });
     setFiles([]);
     form.reset();
   }
@@ -173,8 +191,17 @@ export function DocumentUploadForm() {
       ) : null}
       <Button className="w-full" disabled={state.status === "loading"}>
         <Upload className="h-4 w-4" aria-hidden />
-        {state.status === "loading" ? "登録・抽出中" : "資料を一括登録して検索可能にする"}
+        {state.status === "loading" ? `登録中 ${state.processed}/${state.total}` : "資料を登録して検索可能にする"}
       </Button>
+      {state.status === "loading" ? (
+        <div className="rounded-md border bg-card p-3 text-sm">
+          <p className="font-medium">登録を継続しています。</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {state.currentFile ? `${state.currentFile} を処理中。` : "処理を開始しています。"}大量登録では画面を閉じずにお待ちください。
+          </p>
+          {state.results.length > 0 ? <UploadResults results={state.results} /> : null}
+        </div>
+      ) : null}
       {state.status === "done" ? <UploadResults results={state.results} /> : null}
       {state.status === "error" ? <p className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm">{state.message}</p> : null}
     </form>
@@ -182,9 +209,11 @@ export function DocumentUploadForm() {
 }
 
 function UploadResults({ results }: { results: UploadResult[] }) {
+  const succeeded = results.filter((result) => !result.error).length;
+  const failed = results.length - succeeded;
   return (
     <div className="space-y-2 rounded-md border bg-card p-3 text-sm">
-      <p className="font-medium">登録結果</p>
+      <p className="font-medium">登録結果: 成功 {succeeded}件 / 失敗 {failed}件</p>
       {results.map((result) => {
         const searchable = result.status === "searchable";
         return (
