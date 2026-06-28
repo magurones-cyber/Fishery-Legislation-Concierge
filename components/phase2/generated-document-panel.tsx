@@ -73,7 +73,7 @@ export function GeneratedDocumentPanel({ record }: GeneratedDocumentPanelProps) 
             Word
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">PDFはブラウザの印刷機能で出力します。Word出力は次PhaseのTODOとして残しています。</p>
+        <p className="text-xs text-muted-foreground">PDFはブラウザの印刷機能で出力します。Word形式が必要な場合はMarkdownをコピーして文書作成ソフトへ貼り付けてください。</p>
       </CardContent>
     </Card>
   );

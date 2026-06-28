@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { caseRecords, type ConsultationCase } from "@/lib/phase2-data";
+import type { ConsultationCase } from "@/lib/phase2-data";
 
 type CaseRow = {
   id: string;
@@ -57,7 +57,7 @@ const caseFields = [
   "updated_at"
 ].join(", ");
 
-export async function listCases(): Promise<{ cases: ConsultationCase[]; error: string | null; usingFallback: boolean }> {
+export async function listCases(): Promise<{ cases: ConsultationCase[]; error: string | null }> {
   try {
     const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
@@ -67,12 +67,12 @@ export async function listCases(): Promise<{ cases: ConsultationCase[]; error: s
       .order("updated_at", { ascending: false })
       .limit(50);
 
-    if (error) return { cases: caseRecords, error: "相談履歴をDBから読み込めませんでした。デモデータを表示しています。", usingFallback: true };
+    if (error) return { cases: [], error: "相談履歴を読み込めませんでした。Supabase接続とRLSを確認してください。" };
 
     const cases = ((data ?? []) as unknown as CaseRow[]).map(mapCaseRow);
-    return { cases: cases.length > 0 ? cases : caseRecords, error: null, usingFallback: cases.length === 0 };
+    return { cases, error: null };
   } catch {
-    return { cases: caseRecords, error: "相談履歴を読み込めませんでした。デモデータを表示しています。", usingFallback: true };
+    return { cases: [], error: "相談履歴を読み込めませんでした。ログイン状態、所属、ロールを確認してください。" };
   }
 }
 
@@ -85,7 +85,7 @@ export async function getCase(id: string): Promise<{ record: ConsultationCase | 
     // Fall through to demo records.
   }
 
-  return { record: caseRecords.find((item) => item.id === id) ?? null, isDatabaseRecord: false };
+  return { record: null, isDatabaseRecord: false };
 }
 
 function mapCaseRow(row: CaseRow): ConsultationCase {

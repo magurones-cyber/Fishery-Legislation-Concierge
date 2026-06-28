@@ -27,7 +27,7 @@ export default function FavoritesPage() {
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-muted-foreground">現在のデモデータでは保存済みのお気に入りはありません。実データ接続後、閲覧権限のある対象のみ表示します。</p>
+            <p className="text-sm text-muted-foreground">保存済みのお気に入りはまだありません。資料詳細、案件、回答画面から重要な根拠や対応記録を保存してください。</p>
           </CardContent>
         </Card>
       </div>

@@ -1,15 +1,55 @@
 import { NextResponse } from "next/server";
-import { ADMIN_ROLES, requireApiAuth } from "@/lib/auth";
+import { requireApiAuth } from "@/lib/auth";
+import { buildCasePayload, CASE_EDITOR_ROLES } from "@/lib/case-payload";
 import { createServiceClient } from "@/lib/supabase-admin";
 import { createStorageAdapter, getAttachmentBucket } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
-const CASE_EDITOR_ROLES = ["fisheries_coop_staff", "fisheries_coop_manager", "municipality_staff", "municipality_manager", ...ADMIN_ROLES] as const;
-
 type DeleteBody = {
   reason?: string;
 };
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireApiAuth({ roles: CASE_EDITOR_ROLES });
+  if (auth.response) return auth.response;
+
+  const { id } = await params;
+  const supabase = createServiceClient();
+  const payload = buildCasePayload(await request.json().catch(() => ({})), auth.context.organizationId);
+  if (!payload.title) {
+    return NextResponse.json({ error: "件名を入力してください。" }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .from("consultation_cases")
+    .update(payload)
+    .eq("id", id)
+    .eq("organization_id", auth.context.organizationId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json({ error: "相談履歴を更新できませんでした。" }, { status: 500 });
+  }
+  if (!data) {
+    return NextResponse.json({ error: "更新対象の相談履歴が見つかりません。" }, { status: 404 });
+  }
+
+  await supabase.from("audit_logs").insert({
+    organization_id: auth.context.organizationId,
+    actor_id: auth.context.user.id,
+    action: "case_update",
+    target_table: "consultation_cases",
+    target_id: id,
+    target_case_id: id,
+    result: "success",
+    metadata_json: { title: payload.title, status_label: payload.status_label }
+  });
+
+  return NextResponse.json({ id });
+}
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiAuth({ roles: CASE_EDITOR_ROLES });

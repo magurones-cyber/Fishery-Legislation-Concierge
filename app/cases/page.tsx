@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function CasesPage() {
-  const { cases, error, usingFallback } = await listCases();
+  const { cases, error } = await listCases();
 
   return (
     <AppShell title="案件">
@@ -19,7 +19,7 @@ export default async function CasesPage() {
           相談記録を作成
         </Link>
         {error ? <p className="rounded-md border border-secondary bg-secondary/10 p-3 text-sm text-muted-foreground">{error}</p> : null}
-        {!error && usingFallback ? <p className="rounded-md border bg-muted p-3 text-sm text-muted-foreground">DBに相談履歴がないため、デモ案件を表示しています。</p> : null}
+        {!error && cases.length === 0 ? <p className="rounded-md border bg-card p-4 text-sm text-muted-foreground">相談履歴はまだ登録されていません。「相談記録を作成」から試行案件を登録してください。</p> : null}
 
         <div className="grid gap-3">
           {cases.map((record) => {

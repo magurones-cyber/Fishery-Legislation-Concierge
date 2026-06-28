@@ -2,9 +2,20 @@ import { ListFilter, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { adminOperations, auditLogs } from "@/lib/phase3-data";
+import { adminOperations } from "@/lib/phase3-data";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export default function AdminLogsPage() {
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export default async function AdminLogsPage() {
+  const supabase = await createServerSupabaseClient();
+  const { data: auditLogs, error } = await supabase
+    .from("audit_logs")
+    .select("id, created_at, action, target_table, target_id, ip_address, result")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
   return (
     <AppShell title="監査ログ">
       <div className="space-y-4">
@@ -37,17 +48,19 @@ export default function AdminLogsPage() {
             <p className="text-sm text-muted-foreground">機密情報は平文保存せず、AI送信内容はマスキング後の要約と参照IDで記録します。</p>
           </CardHeader>
           <CardContent className="space-y-3">
-            {auditLogs.map((log) => (
+            {error ? <p className="rounded-md border bg-card p-3 text-sm text-muted-foreground">監査ログを読み込めませんでした。管理者ロールとRLSを確認してください。</p> : null}
+            {!error && (auditLogs ?? []).length === 0 ? <p className="rounded-md border bg-card p-3 text-sm text-muted-foreground">監査ログはまだありません。資料登録、質問、案件更新などの操作後に記録されます。</p> : null}
+            {(auditLogs ?? []).map((log) => (
               <article key={log.id} className="rounded-md border bg-background p-3 text-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold">{log.action}</p>
-                    <p className="text-xs text-muted-foreground">{log.at} / {log.user}</p>
+                    <p className="text-xs text-muted-foreground">{String(log.created_at).replace("T", " ").slice(0, 16)}</p>
                   </div>
                   <span className="rounded-sm bg-muted px-2 py-1 text-xs">{log.result}</span>
                 </div>
-                <p className="mt-2 text-muted-foreground">対象: {log.target}</p>
-                <p className="text-xs text-muted-foreground">IP: {log.ipAddress}</p>
+                <p className="mt-2 text-muted-foreground">対象: {log.target_table ?? "未設定"} {log.target_id ?? ""}</p>
+                <p className="text-xs text-muted-foreground">IP: {log.ip_address ?? "未記録"}</p>
               </article>
             ))}
           </CardContent>

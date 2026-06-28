@@ -161,7 +161,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>この案件、AI回答、根拠資料、チェックリスト、生成文書をお気に入りに登録できる設計です。</p>
+            <p>重要な案件、AI回答、根拠資料、チェックリスト、生成文書はお気に入りに登録して再確認できます。</p>
             <p className="flex items-center gap-2">
               <CalendarClock className="h-4 w-4" aria-hidden />
               添付資料はStorageの公開範囲と案件権限に従って表示します。

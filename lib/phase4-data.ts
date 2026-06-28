@@ -72,7 +72,7 @@ export const categoryUsage = [
 ];
 
 export const tenantSettings = [
-  ["自治体名", "デモ自治体"],
+  ["自治体名", "未設定"],
   ["ロゴ", "未設定"],
   ["表示名", "漁業関係法令コンシェルジュ"],
   ["対象区域", "県内全域"],

@@ -58,7 +58,7 @@ export default async function ChecklistDetailPage({ params }: { params: Promise<
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>案件へ紐付けたチェック結果は、`case_checklists` と `case_checklist_items` に保存する設計です。</p>
+            <p>試行版ではチェック項目を確認し、案件対応時の聞き漏れ防止に使います。案件ごとの進捗保存は次の改善対象です。</p>
             <button type="button" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 font-medium text-primary-foreground">
               <Save className="h-4 w-4" aria-hidden />
               進捗を保存

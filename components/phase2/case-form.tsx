@@ -1,3 +1,7 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarDays, FileText, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,11 +34,38 @@ const baseFields = [
 ];
 
 export function CaseForm({ mode, record }: CaseFormProps) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
   const initialCategory = record?.category ?? "漁港利用";
   const templateItems = caseTemplates[initialCategory as keyof typeof caseTemplates] ?? caseTemplates.漁港利用;
 
+  async function saveCase(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setMessage("");
+    const formData = new FormData(event.currentTarget);
+    const payload = Object.fromEntries(formData.entries());
+    const endpoint = mode === "edit" && record ? `/api/cases/${record.id}` : "/api/cases";
+    const response = await fetch(endpoint, {
+      method: mode === "edit" ? "PATCH" : "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = (await response.json().catch(() => ({}))) as { id?: string; error?: string };
+    setSaving(false);
+
+    if (!response.ok || data.error || !data.id) {
+      setMessage(data.error ?? "相談履歴を保存できませんでした。");
+      return;
+    }
+
+    router.push(`/cases/${data.id}`);
+    router.refresh();
+  }
+
   return (
-    <div className="space-y-4">
+    <form onSubmit={saveCase} className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -46,7 +77,7 @@ export function CaseForm({ mode, record }: CaseFormProps) {
         <CardContent className="space-y-3">
           <label className="space-y-1 text-sm font-medium">
             相談区分
-            <select defaultValue={initialCategory} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
+            <select name="category" defaultValue={initialCategory} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
               {caseCategories.map((category) => (
                 <option key={category}>{category}</option>
               ))}
@@ -54,7 +85,7 @@ export function CaseForm({ mode, record }: CaseFormProps) {
           </label>
           <label className="space-y-1 text-sm font-medium">
             対応状況
-            <select defaultValue={record?.status ?? "未対応"} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
+            <select name="status" defaultValue={record?.status ?? "未対応"} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
               {caseStatuses.map((status) => (
                 <option key={status}>{status}</option>
               ))}
@@ -64,23 +95,8 @@ export function CaseForm({ mode, record }: CaseFormProps) {
             <label key={field} className="space-y-1 text-sm font-medium">
               {field}
               <Input
-                defaultValue={
-                  field === "案件番号"
-                    ? record?.caseNumber
-                    : field === "件名"
-                      ? record?.title
-                      : field === "相談日"
-                        ? record?.consultedAt
-                        : field === "担当者"
-                          ? record?.assignee
-                          : field === "次回対応日"
-                            ? record?.nextActionDate
-                            : field === "期限"
-                              ? record?.dueDate
-                              : field === "タグ"
-                                ? record?.tags.join(", ")
-                                : undefined
-                }
+                name={fieldName(field)}
+                defaultValue={fieldValue(field, record)}
                 placeholder={field}
                 type={field.includes("日") || field === "期限" ? "date" : "text"}
               />
@@ -88,15 +104,15 @@ export function CaseForm({ mode, record }: CaseFormProps) {
           ))}
           <label className="space-y-1 text-sm font-medium">
             相談内容
-            <Textarea defaultValue={record?.content} placeholder="相談内容、事実関係、確認したい判断を記録" />
+            <Textarea name="content" defaultValue={record?.content} placeholder="相談内容、事実関係、確認したい判断を記録" />
           </label>
           <label className="space-y-1 text-sm font-medium">
             AI回答
-            <Textarea defaultValue={record?.aiAnswer} placeholder="AI回答を保存する場合に転記" />
+            <Textarea name="aiAnswer" defaultValue={record?.aiAnswer} placeholder="AI回答を保存する場合に転記" />
           </label>
           <label className="space-y-1 text-sm font-medium">
             内部メモ
-            <Textarea defaultValue={record?.internalMemo} placeholder="庁内・漁協内部の検討事項。閲覧権限に注意。" />
+            <Textarea name="internalMemo" defaultValue={record?.internalMemo} placeholder="庁内・漁協内部の検討事項。閲覧権限に注意。" />
           </label>
         </CardContent>
       </Card>
@@ -113,17 +129,61 @@ export function CaseForm({ mode, record }: CaseFormProps) {
           {templateItems.map((item) => (
             <label key={item} className="space-y-1 text-sm font-medium">
               {item}
-              <Input placeholder={`${item}を入力`} />
+              <Input name={`template_${item}`} placeholder={`${item}を入力`} />
             </label>
           ))}
         </CardContent>
       </Card>
 
-      <Button className="w-full">
+      <Button className="w-full" disabled={saving}>
         <Save className="h-4 w-4" aria-hidden />
-        {mode === "new" ? "案件を保存" : "変更を保存"}
+        {saving ? "保存中" : mode === "new" ? "案件を保存" : "変更を保存"}
       </Button>
-      <p className="text-xs text-muted-foreground">このPhaseでは画面とDB設計を整備しています。実保存はSupabase連携後にServer Actionへ接続します。</p>
-    </div>
+      {message ? <p className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
+      <p className="text-xs text-muted-foreground">保存後は案件一覧で対応状況、次回対応日、期限を確認します。添付資料は案件詳細から追加します。</p>
+    </form>
   );
+}
+
+function fieldName(label: string) {
+  return {
+    案件番号: "caseNumber",
+    件名: "title",
+    相談日: "consultedAt",
+    相談者: "requester",
+    相談者区分: "requesterType",
+    地区: "district",
+    市町村: "municipality",
+    漁協名: "coopName",
+    漁港名: "fishingPort",
+    魚種: "species",
+    漁業種類: "fisheryType",
+    担当者: "assignee",
+    次回対応日: "nextActionDate",
+    期限: "dueDate",
+    関係者: "stakeholders",
+    タグ: "tags"
+  }[label] ?? label;
+}
+
+function fieldValue(label: string, record: ConsultationCase | undefined) {
+  if (!record) return undefined;
+  return {
+    案件番号: record.caseNumber,
+    件名: record.title,
+    相談日: record.consultedAt,
+    相談者: record.requester,
+    相談者区分: record.requesterType,
+    地区: record.district,
+    市町村: record.municipality,
+    漁協名: record.coopName,
+    漁港名: record.fishingPort,
+    魚種: record.species,
+    漁業種類: record.fisheryType,
+    担当者: record.assignee,
+    次回対応日: record.nextActionDate,
+    期限: record.dueDate,
+    関係者: record.stakeholders,
+    タグ: record.tags.join(", ")
+  }[label];
 }
