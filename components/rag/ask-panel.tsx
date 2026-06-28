@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AlertTriangle, CheckCircle2, Send, ThumbsDown, ThumbsUp } from "lucide-react";
+import { rememberRecentQuestion } from "@/components/dashboard/recent-questions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +40,7 @@ export function AskPanel({ autoSubmit = false, initialQuestion = "" }: { autoSub
       setMessage("質問を入力してください。");
       return;
     }
+    rememberRecentQuestion(trimmedQuestion);
     if (masking.containsPersonalData && !maskConfirmed) {
       setMessage("個人情報らしき内容を検知しました。マスキング前後を確認し、確認チェックを入れてください。");
       return;

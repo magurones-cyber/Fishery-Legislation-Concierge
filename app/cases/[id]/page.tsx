@@ -2,14 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarClock, ClipboardCheck, History, Pencil, ShieldAlert, Star } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
+import { CaseDeleteButton } from "@/components/phase2/case-delete-button";
 import { GeneratedDocumentPanel } from "@/components/phase2/generated-document-panel";
 import { PhotoAttachments } from "@/components/phase4/photo-attachments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { caseRecords, checklistRecords, historyTypes, isOverdue } from "@/lib/phase2-data";
+import { getCase } from "@/lib/cases";
+import { checklistRecords, historyTypes, isOverdue } from "@/lib/phase2-data";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const record = caseRecords.find((item) => item.id === id);
+  const { record, isDatabaseRecord } = await getCase(id);
 
   if (!record) {
     notFound();
@@ -30,10 +35,13 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             <ArrowLeft className="h-4 w-4" aria-hidden />
             案件一覧へ戻る
           </Link>
-          <Link href={`/cases/${record.id}/edit`} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium">
-            <Pencil className="h-4 w-4" aria-hidden />
-            編集
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href={`/cases/${record.id}/edit`} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-background px-3 text-sm font-medium">
+              <Pencil className="h-4 w-4" aria-hidden />
+              編集
+            </Link>
+            {isDatabaseRecord ? <CaseDeleteButton caseId={record.id} /> : null}
+          </div>
         </div>
 
         <Card className={overdue ? "border-destructive" : undefined}>

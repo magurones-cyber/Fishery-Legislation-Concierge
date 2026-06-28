@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Send } from "lucide-react";
+import { rememberRecentQuestion } from "@/components/dashboard/recent-questions";
 import { Textarea } from "@/components/ui/textarea";
 
 export function QuestionEntry() {
@@ -15,6 +16,9 @@ export function QuestionEntry() {
     const params = new URLSearchParams();
     if (query) {
       params.set("q", query);
+      if (destination === "ask") {
+        rememberRecentQuestion(query);
+      }
     }
     if (destination === "ask" && query) {
       params.set("auto", "1");

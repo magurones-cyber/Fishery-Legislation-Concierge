@@ -1,12 +1,16 @@
 import Link from "next/link";
-import { ArrowRight, Clock, Star } from "lucide-react";
+import { Clock, Star } from "lucide-react";
 import { QuestionEntry } from "@/components/dashboard/question-entry";
+import { RecentQuestions } from "@/components/dashboard/recent-questions";
 import { AppShell } from "@/components/layout/app-shell";
 import { Section } from "@/components/layout/section";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { menuItems } from "@/lib/mock-data";
 import { updateNotifications } from "@/lib/phase3-data";
 import { listRecentQuestions } from "@/lib/question-history";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function DashboardPage() {
   const { questions: recentQuestions, error: recentQuestionsError } = await listRecentQuestions();
@@ -34,16 +38,7 @@ export default async function DashboardPage() {
         </Section>
 
         <Section title="最近の質問">
-          <div className="space-y-2">
-            {recentQuestionsError ? <p className="rounded-md border bg-card p-3 text-sm text-muted-foreground">{recentQuestionsError}</p> : null}
-            {!recentQuestionsError && recentQuestions.length === 0 ? <p className="rounded-md border bg-card p-3 text-sm text-muted-foreground">まだ質問履歴はありません。ホームの入力欄から質問すると、ここに表示されます。</p> : null}
-            {recentQuestions.map((question) => (
-              <Link key={question.id} href={`/ask?q=${encodeURIComponent(question.title)}&auto=1`} className="flex min-w-0 items-center justify-between gap-2 rounded-md border bg-card p-3">
-                <span className="min-w-0 break-words text-sm leading-snug">{question.title}</span>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-              </Link>
-            ))}
-          </div>
+          <RecentQuestions initialQuestions={recentQuestions} error={recentQuestionsError} />
         </Section>
 
         <div className="grid gap-4 sm:grid-cols-2">

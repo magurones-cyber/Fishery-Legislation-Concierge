@@ -3,11 +3,14 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { CaseForm } from "@/components/phase2/case-form";
-import { caseRecords } from "@/lib/phase2-data";
+import { getCase } from "@/lib/cases";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function EditCasePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const record = caseRecords.find((item) => item.id === id);
+  const { record } = await getCase(id);
 
   if (!record) {
     notFound();

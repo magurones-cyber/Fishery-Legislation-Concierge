@@ -2,9 +2,15 @@ import Link from "next/link";
 import { AlertTriangle, CalendarClock, Plus, Tag, UserRound } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { caseRecords, isOverdue } from "@/lib/phase2-data";
+import { listCases } from "@/lib/cases";
+import { isOverdue } from "@/lib/phase2-data";
 
-export default function CasesPage() {
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export default async function CasesPage() {
+  const { cases, error, usingFallback } = await listCases();
+
   return (
     <AppShell title="案件">
       <div className="space-y-4">
@@ -12,9 +18,11 @@ export default function CasesPage() {
           <Plus className="h-4 w-4" aria-hidden />
           相談記録を作成
         </Link>
+        {error ? <p className="rounded-md border border-secondary bg-secondary/10 p-3 text-sm text-muted-foreground">{error}</p> : null}
+        {!error && usingFallback ? <p className="rounded-md border bg-muted p-3 text-sm text-muted-foreground">DBに相談履歴がないため、デモ案件を表示しています。</p> : null}
 
         <div className="grid gap-3">
-          {caseRecords.map((record) => {
+          {cases.map((record) => {
             const overdue = isOverdue(record.dueDate) && record.status !== "完了";
             return (
               <Link key={record.id} href={`/cases/${record.id}`} className="block">
