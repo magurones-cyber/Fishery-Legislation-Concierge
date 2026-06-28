@@ -121,6 +121,20 @@ export async function searchDocumentMetadata(
     });
 }
 
+export async function filterActiveDocumentResults(
+  supabase: ReturnType<typeof createServiceClient>,
+  results: SearchResult[]
+): Promise<SearchResult[]> {
+  const documentIds = [...new Set(results.map((result) => result.document_id))];
+  if (documentIds.length === 0) return results;
+
+  const { data, error } = await supabase.from("documents").select("id").in("id", documentIds).is("deleted_at", null);
+  if (error) throw new Error(error.message);
+
+  const activeIds = new Set(((data ?? []) as Array<{ id: string }>).map((row) => row.id));
+  return results.filter((result) => activeIds.has(result.document_id));
+}
+
 function normalizeSearchText(value: string) {
   return value.normalize("NFKC").toLocaleLowerCase("ja-JP").replace(/\s+/g, "");
 }

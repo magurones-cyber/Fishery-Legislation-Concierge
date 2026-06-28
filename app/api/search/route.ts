@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase-admin";
 import { audienceRoleFor, requireApiAuth } from "@/lib/auth";
-import { hybridSearch, searchDocumentMetadata } from "@/lib/rag/search";
+import { filterActiveDocumentResults, hybridSearch, searchDocumentMetadata } from "@/lib/rag/search";
 
 export const runtime = "nodejs";
 
@@ -41,7 +41,8 @@ export async function POST(request: Request) {
       searchDocumentMetadata(supabase, params)
     ]);
     const chunkDocumentIds = new Set(chunkResults.map((result) => result.document_id));
-    const results = [...chunkResults, ...metadataResults.filter((result) => !chunkDocumentIds.has(result.document_id))].slice(0, 12);
+    const mergedResults = [...chunkResults, ...metadataResults.filter((result) => !chunkDocumentIds.has(result.document_id))];
+    const results = (await filterActiveDocumentResults(supabase, mergedResults)).slice(0, 12);
 
     return NextResponse.json({ results });
   } catch {

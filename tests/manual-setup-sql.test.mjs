@@ -144,6 +144,7 @@ test("all-in-one setup is a real combined SQL file", () => {
   assert.match(allInOne, /create extension if not exists vector/);
   assert.match(allInOne, /create table if not exists public\.organizations/);
   assert.match(allInOne, /create or replace function public\.hybrid_search_document_chunks/);
+  assert.match(allInOne, /and d\.deleted_at is null/);
   assert.match(allInOne, /create policy "read documents in org by visibility"/);
   assert.match(allInOne, /insert into public\.categories/);
   assert.doesNotMatch(allInOne, /order by score desc/);

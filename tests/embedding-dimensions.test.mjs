@@ -15,9 +15,11 @@ test("RAG search functions accept 1536-dimension embeddings", () => {
   const phase1 = read("supabase/migrations/202606140001_phase1_rag.sql");
   const categorySearch = read("supabase/migrations/202606140002_recreational_fishing_boat_categories.sql");
   const correction = read("supabase/migrations/202606150001_embedding_1536_pgvector.sql");
+  const deletedFilter = read("supabase/migrations/202606280001_deleted_documents_search_filter.sql");
 
-  for (const sql of [phase1, categorySearch, correction]) {
+  for (const sql of [phase1, categorySearch, correction, deletedFilter]) {
     assert.match(sql, /query_embedding vector\(1536\)/);
+    assert.match(sql, /and d\.deleted_at is null/);
   }
 
   assert.match(correction, /public\.match_documents\(\s*query_embedding vector\(1536\)/);

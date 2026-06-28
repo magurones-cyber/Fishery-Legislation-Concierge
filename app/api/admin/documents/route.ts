@@ -11,6 +11,9 @@ import type { RagChunk } from "@/lib/rag/types";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const MAX_SEARCHABLE_CHUNKS_PER_DOCUMENT = 180;
+const MAX_EMBEDDED_CHUNKS_PER_DOCUMENT = 12;
+
 type RegistrationResult = {
   documentId?: string;
   fileName: string;
@@ -148,8 +151,9 @@ async function registerDocumentFile({
   }
 
   const extractedChunks = extraction.status === "completed" ? chunkPages(extraction.pages, sourceType) : [];
-  const chunks = extractedChunks.length > 0
-    ? extractedChunks
+  const searchableChunks = limitSearchableChunks(extractedChunks);
+  const chunks = searchableChunks.length > 0
+    ? searchableChunks
     : [
         buildMetadataChunk({
           title,
@@ -180,12 +184,16 @@ async function registerDocumentFile({
 
   let embeddedCount = 0;
   let embeddingFailed = false;
+  const chunkRows = [];
   for (const chunk of chunks) {
-    const embedding = await createEmbedding(chunk.content).catch(() => {
-      embeddingFailed = true;
-      return null;
-    });
-    const { error: chunkError } = await supabase.from("document_chunks").insert({
+    const shouldEmbed = chunk.chunkIndex < MAX_EMBEDDED_CHUNKS_PER_DOCUMENT;
+    const embedding = shouldEmbed
+      ? await createEmbedding(chunk.content).catch(() => {
+          embeddingFailed = true;
+          return null;
+        })
+      : null;
+    chunkRows.push({
       document_version_id: version.id,
       document_id: document.id,
       chunk_index: chunk.chunkIndex,
@@ -198,22 +206,28 @@ async function registerDocumentFile({
       token_count: estimateTokens(chunk.content),
       embedding
     });
-    if (chunkError) {
-      await supabase
-        .from("documents")
-        .update({ processing_status: "failed", processing_error: "チャンク保存に失敗しました。", processed_at: new Date().toISOString() })
-        .eq("id", document.id);
-      return { documentId: document.id, fileName: file.name, error: "チャンク保存に失敗しました。", detail: chunkError.message };
-    }
     if (embedding) embeddedCount += 1;
+  }
+
+  const { error: chunkError } = await supabase.from("document_chunks").insert(chunkRows);
+  if (chunkError) {
+    await supabase
+      .from("documents")
+      .update({ processing_status: "failed", processing_error: "チャンク保存に失敗しました。", processed_at: new Date().toISOString() })
+      .eq("id", document.id);
+    return { documentId: document.id, fileName: file.name, error: "チャンク保存に失敗しました。", detail: chunkError.message };
   }
 
   await upsertTags(supabase, organizationId, document.id, tags);
 
   const finalStatus = chunks.length > 0 ? "searchable" : extraction.status;
-  const processingWarning = extraction.errorMessage
-    ?? (extractedChunks.length === 0 ? "本文を抽出できませんでした。資料情報のみ検索対象として登録しました。本文検索にはOCR、XML/RTF/TXT、又はテキスト抽出可能なPDFでの再登録が必要です。" : null)
-    ?? (embeddingFailed ? "Embedding生成に失敗しました。キーワード検索は利用できます。" : null);
+  const processingWarning = buildProcessingWarning({
+    extractionError: extraction.errorMessage,
+    extractedChunkCount: extractedChunks.length,
+    storedChunkCount: chunks.length,
+    embeddedCount,
+    embeddingFailed
+  });
   await supabase
     .from("documents")
     .update({
@@ -241,6 +255,37 @@ async function registerDocumentFile({
     embeddings: embeddedCount,
     warning: processingWarning
   };
+}
+
+function limitSearchableChunks(chunks: RagChunk[]) {
+  if (chunks.length <= MAX_SEARCHABLE_CHUNKS_PER_DOCUMENT) return chunks;
+  return chunks.slice(0, MAX_SEARCHABLE_CHUNKS_PER_DOCUMENT).map((chunk, index) => ({
+    ...chunk,
+    chunkIndex: index
+  }));
+}
+
+function buildProcessingWarning({
+  extractionError,
+  extractedChunkCount,
+  storedChunkCount,
+  embeddedCount,
+  embeddingFailed
+}: {
+  extractionError: string | null;
+  extractedChunkCount: number;
+  storedChunkCount: number;
+  embeddedCount: number;
+  embeddingFailed: boolean;
+}) {
+  const warnings = [
+    extractionError,
+    extractedChunkCount === 0 ? "本文を抽出できませんでした。資料情報のみ検索対象として登録しました。本文検索にはOCR、XML/RTF/TXT、又はテキスト抽出可能なPDFでの再登録が必要です。" : null,
+    extractedChunkCount > storedChunkCount ? `本文が大きいため先頭${storedChunkCount}チャンクを検索対象として登録しました。全文を厳密に扱う場合は分割登録してください。` : null,
+    storedChunkCount > embeddedCount ? `Embeddingは先頭${embeddedCount}チャンクのみ生成しました。残りのチャンクはキーワード検索で検索できます。` : null,
+    embeddingFailed ? "一部のEmbedding生成に失敗しました。キーワード検索は利用できます。" : null
+  ].filter(Boolean);
+  return warnings.length > 0 ? warnings.join(" ") : null;
 }
 
 function buildMetadataChunk({

@@ -36,6 +36,7 @@ test("document screens use Supabase-backed document queries", async () => {
   assert.doesNotMatch(detailPage, /lib\/mock-data/);
   assert.match(adminPage, /listReadableDocuments/);
   assert.match(searchRoute, /searchDocumentMetadata/);
+  assert.match(searchRoute, /filterActiveDocumentResults/);
 });
 
 test("mobile shell prevents horizontal overflow", async () => {
@@ -70,12 +71,18 @@ test("document management supports batch upload, auto category, edit, and logica
   assert.match(uploadRoute, /formData\.getAll\("files"\)/);
   assert.match(uploadRoute, /return "xml"/);
   assert.match(uploadRoute, /return "rtf"/);
+  assert.match(uploadRoute, /MAX_SEARCHABLE_CHUNKS_PER_DOCUMENT/);
+  assert.match(uploadRoute, /MAX_EMBEDDED_CHUNKS_PER_DOCUMENT/);
+  assert.match(uploadRoute, /limitSearchableChunks/);
   assert.match(uploadRoute, /classifyCategoryCode/);
   assert.match(uploadRoute, /buildMetadataChunk/);
   assert.match(uploadRoute, /資料情報のみ検索対象として登録/);
   assert.match(editRoute, /export async function PATCH/);
   assert.match(editRoute, /export async function DELETE/);
   assert.match(editRoute, /deleted_at/);
+  assert.match(editRoute, /document_chunks"\)\.delete\(\)\.eq\("document_id", id\)/);
+  assert.match(editRoute, /removeOriginalFiles/);
+  assert.match(editRoute, /storage\.remove/);
   assert.match(adminDetail, /DocumentEditForm/);
   assert.match(classifier, /漁港/);
   assert.match(classifier, /補助金/);

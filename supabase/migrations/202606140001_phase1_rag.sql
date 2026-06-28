@@ -180,6 +180,7 @@ as $$
   where d.organization_id = organization_id_input
     and d.visibility::text = any(readable_visibilities)
     and d.processing_status = 'searchable'
+    and d.deleted_at is null
     and (category_id_input is null or d.category_id = category_id_input or d.subcategory_id = category_id_input)
     and (source_type_input is null or d.source_type::text = source_type_input)
     and (issuing_authority_input is null or d.issuing_authority ilike '%' || issuing_authority_input || '%')
